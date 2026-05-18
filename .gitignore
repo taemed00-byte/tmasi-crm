@@ -1,0 +1,45 @@
+# Environment
+.env
+*.env.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads / local media
+uploads/
+media/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+*.egg
+
+# Node (not used but safety)
+node_modules/
+
+# Test artifacts
+tests/screenshots/
+*.png
+!docs/*.png
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic (keep migrations dir but not env cache)
+alembic/versions/__pycache__/
+.gh_token

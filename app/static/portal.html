@@ -1,0 +1,1798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Portal — TMASI Medical Centre</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --teal-900: #0c4a6e;
+      --teal-700: #0369a1;
+      --teal-600: #0891b2;
+      --teal-500: #06b6d4;
+      --teal-400: #22d3ee;
+      --teal-100: #e0f2fe;
+      --teal-50:  #f0f9ff;
+      --amber-500: #f59e0b;
+      --amber-400: #fbbf24;
+      --amber-100: #fef3c7;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50:  #f8fafc;
+      --white:     #ffffff;
+      --success:   #059669;
+      --error:     #dc2626;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+      --shadow:    0 4px 16px rgba(8,145,178,.10), 0 2px 8px rgba(0,0,0,.06);
+      --shadow-lg: 0 12px 40px rgba(8,145,178,.15), 0 4px 16px rgba(0,0,0,.08);
+      --radius:    12px;
+      --radius-lg: 20px;
+      --transition: .2s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--white);
+      color: var(--slate-700);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+    button { font-family: inherit; cursor: pointer; border: none; }
+
+    /* ── Utilities ── */
+    .container { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; clip: rect(0,0,0,0); }
+    .hidden { display: none !important; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: 50px; font-size: 15px;
+      font-weight: 600; transition: all var(--transition); white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--teal-600); color: var(--white);
+      box-shadow: 0 4px 14px rgba(8,145,178,.35);
+    }
+    .btn-primary:hover { background: var(--teal-700); box-shadow: 0 6px 20px rgba(8,145,178,.45); transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent; color: var(--teal-600);
+      border: 2px solid var(--teal-600);
+    }
+    .btn-outline:hover { background: var(--teal-50); }
+    .btn-amber {
+      background: var(--amber-500); color: var(--white);
+      box-shadow: 0 4px 14px rgba(245,158,11,.35);
+    }
+    .btn-amber:hover { background: #d97706; transform: translateY(-1px); }
+    .btn-white {
+      background: var(--white); color: var(--teal-700);
+      box-shadow: var(--shadow);
+    }
+    .btn-white:hover { background: var(--teal-50); transform: translateY(-1px); }
+    .btn-sm { padding: 8px 18px; font-size: 13px; }
+    .btn-lg { padding: 16px 36px; font-size: 17px; }
+
+    /* ── Nav ── */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--slate-200);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 68px; gap: 24px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 800; font-size: 18px; color: var(--teal-700);
+    }
+    .nav-logo-icon {
+      width: 36px; height: 36px; background: linear-gradient(135deg,var(--teal-600),var(--teal-900));
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      color: var(--white); font-size: 18px;
+    }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-link {
+      font-size: 14px; font-weight: 500; color: var(--slate-500);
+      transition: color var(--transition);
+    }
+    .nav-link:hover { color: var(--teal-600); }
+    .nav-actions { display: flex; align-items: center; gap: 12px; }
+    #navUserName { font-size: 14px; font-weight: 600; color: var(--teal-700); }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #0c4a6e 0%, #0891b2 45%, #06b6d4 100%);
+      padding: 96px 0 80px; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+      position: relative;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,.15); color: #bae6fd; border-radius: 50px;
+      padding: 6px 14px; font-size: 13px; font-weight: 500; margin-bottom: 20px;
+      border: 1px solid rgba(255,255,255,.2);
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 52px); font-weight: 900;
+      color: var(--white); line-height: 1.15; margin-bottom: 20px;
+      letter-spacing: -.02em;
+    }
+    .hero h1 span { color: var(--amber-400); }
+    .hero-sub {
+      font-size: 18px; color: #bae6fd; line-height: 1.7; margin-bottom: 36px;
+      max-width: 480px;
+    }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+    .hero-visual {
+      display: flex; align-items: center; justify-content: center;
+    }
+    .hero-card-stack { position: relative; width: 100%; max-width: 400px; }
+    .hero-card {
+      background: rgba(255,255,255,.12); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.2); border-radius: var(--radius-lg);
+      padding: 24px; color: var(--white);
+    }
+    .hero-card-main { margin-bottom: 16px; }
+    .hero-card-float {
+      position: absolute; right: -24px; bottom: -20px;
+      background: var(--white); border-radius: var(--radius);
+      padding: 16px 20px; box-shadow: var(--shadow-lg);
+      color: var(--slate-700); min-width: 180px;
+    }
+    .hc-label { font-size: 11px; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    .hc-value { font-size: 22px; font-weight: 800; color: var(--teal-600); }
+    .hc-sub { font-size: 12px; color: var(--slate-500); margin-top: 2px; }
+    .hero-trust {
+      display: flex; gap: 24px; flex-wrap: wrap; margin-top: 48px;
+      padding-top: 36px; border-top: 1px solid rgba(255,255,255,.15);
+    }
+    .trust-item { display: flex; align-items: center; gap: 8px; color: #bae6fd; font-size: 14px; font-weight: 500; }
+    .trust-icon { font-size: 18px; }
+
+    /* ── Stats bar ── */
+    .stats-bar { background: var(--slate-900); padding: 40px 0; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
+    .stat-item { text-align: center; }
+    .stat-num { font-size: 36px; font-weight: 900; color: var(--teal-400); line-height: 1; }
+    .stat-label { font-size: 14px; color: var(--slate-400); margin-top: 4px; }
+
+    /* ── Section headers ── */
+    .section { padding: 80px 0; }
+    .section-alt { background: var(--teal-50); }
+    .section-dark { background: var(--slate-900); }
+    .section-header { text-align: center; max-width: 600px; margin: 0 auto 56px; }
+    .section-tag {
+      display: inline-block; background: var(--teal-100); color: var(--teal-700);
+      font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      padding: 5px 12px; border-radius: 50px; margin-bottom: 12px;
+    }
+    .section-title { font-size: clamp(26px, 4vw, 38px); font-weight: 800; color: var(--slate-900); line-height: 1.2; margin-bottom: 14px; letter-spacing: -.02em; }
+    .section-sub { font-size: 17px; color: var(--slate-500); line-height: 1.6; }
+
+    /* ── Services grid ── */
+    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .service-card {
+      background: var(--white); border-radius: var(--radius-lg); padding: 32px;
+      border: 1px solid var(--slate-200); transition: all var(--transition);
+      position: relative; overflow: hidden;
+    }
+    .service-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--teal-600), var(--teal-400));
+      transform: scaleX(0); transform-origin: left; transition: transform var(--transition);
+    }
+    .service-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+    .service-card:hover::before { transform: scaleX(1); }
+    .service-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: var(--teal-100); color: var(--teal-600);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-bottom: 16px;
+    }
+    .service-card h3 { font-size: 17px; font-weight: 700; color: var(--slate-900); margin-bottom: 8px; }
+    .service-card p { font-size: 14px; color: var(--slate-500); line-height: 1.6; }
+
+    /* ── Doctor cards ── */
+    .doctors-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    .doctor-card {
+      background: var(--white); border-radius: var(--radius-lg);
+      border: 1px solid var(--slate-200); overflow: hidden;
+      transition: all var(--transition);
+    }
+    .doctor-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+    .doctor-avatar {
+      width: 100%; height: 180px; background: linear-gradient(135deg, var(--teal-100), var(--teal-50));
+      display: flex; align-items: center; justify-content: center; font-size: 72px;
+      position: relative; overflow: hidden;
+    }
+    .doctor-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .doctor-body { padding: 20px; }
+    .doctor-specialty {
+      display: inline-block; background: var(--teal-100); color: var(--teal-700);
+      font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 50px;
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px;
+    }
+    .doctor-card h3 { font-size: 17px; font-weight: 700; color: var(--slate-900); margin-bottom: 6px; }
+    .doctor-bio { font-size: 13px; color: var(--slate-500); line-height: 1.5; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .doctor-meta { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+    .doctor-meta-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--slate-500); }
+    .doctor-meta-item span:first-child { font-size: 14px; }
+    .doctor-fee { font-size: 13px; font-weight: 600; color: var(--teal-600); }
+    .doctor-footer { padding: 0 20px 20px; }
+
+    /* ── How it works ── */
+    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+    .step {
+      text-align: center; padding: 32px 24px;
+      background: var(--white); border-radius: var(--radius-lg);
+      border: 1px solid var(--slate-200); position: relative;
+    }
+    .step-num {
+      width: 56px; height: 56px; background: linear-gradient(135deg, var(--teal-600), var(--teal-500));
+      color: var(--white); border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 22px; font-weight: 800;
+      margin: 0 auto 20px; box-shadow: 0 4px 16px rgba(8,145,178,.35);
+    }
+    .step h3 { font-size: 18px; font-weight: 700; color: var(--slate-900); margin-bottom: 10px; }
+    .step p { font-size: 14px; color: var(--slate-500); line-height: 1.6; }
+    .step-connector {
+      position: absolute; right: -20px; top: 50%; transform: translateY(-50%);
+      width: 40px; height: 2px; background: var(--slate-200); z-index: 1;
+    }
+    .steps-grid .step:last-child .step-connector { display: none; }
+
+    /* ── Testimonials ── */
+    .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    .testimonial-card {
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+      border-radius: var(--radius-lg); padding: 28px;
+    }
+    .testimonial-stars { color: var(--amber-400); font-size: 16px; margin-bottom: 14px; letter-spacing: 2px; }
+    .testimonial-text { color: #cbd5e1; font-size: 14px; line-height: 1.7; margin-bottom: 20px; font-style: italic; }
+    .testimonial-author { display: flex; align-items: center; gap: 12px; }
+    .testimonial-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--teal-600), var(--teal-400));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; color: var(--white);
+    }
+    .testimonial-name { font-size: 14px; font-weight: 600; color: var(--white); }
+    .testimonial-country { font-size: 12px; color: var(--slate-400); }
+
+    /* ── FAQ ── */
+    .faq-list { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .faq-item {
+      border: 1px solid var(--slate-200); border-radius: var(--radius);
+      overflow: hidden; background: var(--white);
+    }
+    .faq-q {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px; font-size: 15px; font-weight: 600; color: var(--slate-900);
+      background: transparent; gap: 16px; text-align: left;
+    }
+    .faq-q:hover { background: var(--teal-50); color: var(--teal-700); }
+    .faq-icon { font-size: 20px; color: var(--teal-600); flex-shrink: 0; transition: transform var(--transition); }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-a {
+      max-height: 0; overflow: hidden; transition: max-height .35s cubic-bezier(.4,0,.2,1);
+    }
+    .faq-a-inner { padding: 0 24px 20px; font-size: 14px; color: var(--slate-500); line-height: 1.7; }
+    .faq-item.open .faq-a { max-height: 400px; }
+
+    /* ── CTA Banner ── */
+    .cta-banner {
+      background: linear-gradient(135deg, var(--teal-700), var(--teal-600));
+      padding: 72px 0; text-align: center;
+    }
+    .cta-banner h2 { font-size: 36px; font-weight: 800; color: var(--white); margin-bottom: 12px; }
+    .cta-banner p { font-size: 18px; color: #bae6fd; margin-bottom: 32px; }
+    .cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── Footer ── */
+    .footer { background: var(--slate-900); padding: 60px 0 32px; color: var(--slate-400); }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+    .footer-brand { color: var(--white); }
+    .footer-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 800; font-size: 17px; color: var(--white); margin-bottom: 14px;
+    }
+    .footer-logo-icon {
+      width: 32px; height: 32px; background: linear-gradient(135deg,var(--teal-600),var(--teal-400));
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: var(--white);
+    }
+    .footer-desc { font-size: 14px; color: var(--slate-400); line-height: 1.7; margin-bottom: 20px; }
+    .footer-whatsapp {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #25d366; color: var(--white); padding: 10px 18px;
+      border-radius: 50px; font-size: 13px; font-weight: 600;
+      transition: all var(--transition);
+    }
+    .footer-whatsapp:hover { background: #128c7e; transform: translateY(-1px); }
+    .footer-col h4 { font-size: 13px; font-weight: 700; color: var(--white); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+    .footer-links { display: flex; flex-direction: column; gap: 10px; }
+    .footer-link { font-size: 14px; color: var(--slate-400); transition: color var(--transition); }
+    .footer-link:hover { color: var(--teal-400); }
+    .footer-bottom { border-top: 1px solid rgba(255,255,255,.08); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: gap; gap: 12px; }
+    .footer-copy { font-size: 13px; }
+
+    /* ── Auth Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(15,23,42,.6); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal {
+      background: var(--white); border-radius: var(--radius-lg);
+      width: 100%; max-width: 480px;
+      box-shadow: var(--shadow-lg); position: relative;
+      max-height: 92vh; overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+    .modal-header {
+      padding: 24px 28px 0; position: sticky; top: 0;
+      background: var(--white); z-index: 2;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 32px; height: 32px; border-radius: 50%; border: none;
+      background: var(--slate-100); color: var(--slate-500); font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all var(--transition); cursor: pointer; flex-shrink: 0;
+    }
+    .modal-close:hover { background: var(--slate-200); color: var(--slate-800); }
+    .modal-body { padding: 0 28px 28px; }
+
+    /* Auth tabs (Sign In / Create Account) */
+    .auth-tabs {
+      display: flex; gap: 0; border-bottom: 2px solid var(--slate-200); margin-bottom: 28px;
+    }
+    .auth-tab {
+      flex: 1; padding: 12px 8px; font-size: 14px; font-weight: 600;
+      color: var(--slate-400); border-bottom: 2px solid transparent;
+      background: transparent; transition: all var(--transition);
+      text-align: center; margin-bottom: -2px;
+    }
+    .auth-tab:hover { color: var(--teal-600); }
+    .auth-tab.active { color: var(--teal-600); border-bottom-color: var(--teal-600); }
+
+    /* OTP step header */
+    .otp-header { text-align: center; margin-bottom: 24px; }
+    .otp-icon {
+      width: 60px; height: 60px; border-radius: 18px; margin: 0 auto 16px;
+      background: linear-gradient(135deg, var(--teal-100), var(--teal-50));
+      display: flex; align-items: center; justify-content: center; font-size: 28px;
+    }
+    .otp-header h3 { font-size: 20px; font-weight: 800; color: var(--slate-900); margin-bottom: 6px; }
+    .otp-header p { font-size: 14px; color: var(--slate-500); line-height: 1.5; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--slate-700); margin-bottom: 6px; }
+    .form-label .required { color: var(--error); margin-left: 2px; }
+    .form-input {
+      width: 100%; padding: 11px 14px; border: 1.5px solid var(--slate-200);
+      border-radius: 10px; font-size: 14px; font-family: inherit;
+      color: var(--slate-900); background: var(--slate-50);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+    }
+    .form-input:focus { border-color: var(--teal-500); box-shadow: 0 0 0 3px rgba(6,182,212,.12); background: var(--white); }
+    .form-input.otp-input {
+      font-size: 32px; letter-spacing: 14px; text-align: center;
+      font-weight: 800; padding: 18px 16px; font-family: monospace;
+    }
+    .form-input.error { border-color: var(--error); }
+    .form-hint { font-size: 12px; color: var(--slate-400); margin-top: 5px; }
+    .form-error { font-size: 13px; color: var(--error); margin-top: 6px; font-weight: 500;
+      display: flex; align-items: flex-start; gap: 5px; }
+    .form-error::before { content: '⚠'; flex-shrink: 0; }
+    .btn-full { width: 100%; justify-content: center; }
+    .auth-switch { text-align: center; margin-top: 16px; font-size: 13px; color: var(--slate-500); }
+    .auth-link { color: var(--teal-600); font-weight: 600; cursor: pointer; }
+    .auth-link:hover { text-decoration: underline; }
+
+    /* Progress bar inside modal */
+    .auth-progress {
+      height: 3px; background: var(--slate-100); border-radius: 2px; margin-bottom: 20px;
+    }
+    .auth-progress-bar {
+      height: 100%; background: linear-gradient(90deg, var(--teal-600), var(--teal-400));
+      border-radius: 2px; transition: width .4s ease;
+    }
+
+    /* Success state */
+    .auth-success {
+      text-align: center; padding: 20px 0 8px;
+    }
+    .success-icon {
+      width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 20px;
+      background: linear-gradient(135deg, #059669, #10b981);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; box-shadow: 0 4px 20px rgba(5,150,105,.3);
+      animation: popIn .4s cubic-bezier(.175,.885,.32,1.275);
+    }
+    @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .auth-success h3 { font-size: 22px; font-weight: 800; color: var(--slate-900); margin-bottom: 8px; }
+    .auth-success p { font-size: 14px; color: var(--slate-500); line-height: 1.6; }
+
+    @media (max-width: 480px) {
+      .form-group-row { grid-template-columns: 1fr; gap: 0; }
+      .modal-body { padding: 0 20px 24px; }
+      .modal-header { padding: 20px 20px 0; }
+    }
+
+    /* ── Dashboard ── */
+    .dashboard { min-height: calc(100vh - 68px); background: var(--slate-50); }
+    .dashboard-header {
+      background: linear-gradient(135deg, var(--teal-700), var(--teal-600));
+      padding: 40px 0;
+    }
+    .dashboard-welcome { color: var(--white); }
+    .dashboard-welcome .greeting { font-size: 14px; color: #bae6fd; margin-bottom: 4px; }
+    .dashboard-welcome h1 { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .dashboard-welcome .sub { font-size: 14px; color: #bae6fd; }
+    .dashboard-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px;
+    }
+    .dash-stat {
+      background: rgba(255,255,255,.15); border-radius: var(--radius);
+      padding: 16px 20px; border: 1px solid rgba(255,255,255,.15);
+    }
+    .dash-stat-val { font-size: 28px; font-weight: 800; color: var(--white); }
+    .dash-stat-label { font-size: 13px; color: #bae6fd; margin-top: 2px; }
+
+    .dashboard-tabs {
+      background: var(--white); border-bottom: 1px solid var(--slate-200);
+      position: sticky; top: 68px; z-index: 10;
+    }
+    .tabs-inner { display: flex; gap: 0; }
+    .tab-btn {
+      padding: 16px 28px; font-size: 14px; font-weight: 600;
+      color: var(--slate-500); border-bottom: 3px solid transparent;
+      background: transparent; transition: all var(--transition);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .tab-btn:hover { color: var(--teal-600); }
+    .tab-btn.active { color: var(--teal-600); border-bottom-color: var(--teal-600); }
+
+    .dashboard-content { padding: 36px 0 80px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Appointment cards */
+    .appointments-list { display: flex; flex-direction: column; gap: 16px; }
+    .appt-card {
+      background: var(--white); border-radius: var(--radius-lg);
+      border: 1px solid var(--slate-200); padding: 24px;
+      display: flex; gap: 20px; align-items: flex-start;
+      transition: box-shadow var(--transition);
+    }
+    .appt-card:hover { box-shadow: var(--shadow); }
+    .appt-date-badge {
+      background: var(--teal-50); border: 1px solid var(--teal-100);
+      border-radius: var(--radius); padding: 12px 16px; text-align: center;
+      min-width: 68px; flex-shrink: 0;
+    }
+    .appt-day { font-size: 26px; font-weight: 800; color: var(--teal-600); line-height: 1; }
+    .appt-month { font-size: 11px; font-weight: 700; color: var(--teal-500); text-transform: uppercase; letter-spacing: .08em; }
+    .appt-info { flex: 1; }
+    .appt-title { font-size: 16px; font-weight: 700; color: var(--slate-900); margin-bottom: 4px; }
+    .appt-meta { font-size: 13px; color: var(--slate-500); margin-bottom: 12px; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 50px; font-size: 12px; font-weight: 600;
+    }
+    .status-scheduled { background: var(--amber-100); color: #92400e; }
+    .status-confirmed { background: #d1fae5; color: #065f46; }
+    .status-completed { background: var(--teal-100); color: var(--teal-700); }
+    .status-cancelled { background: #fee2e2; color: #991b1b; }
+
+    /* Documents grid */
+    .docs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .doc-card {
+      background: var(--white); border-radius: var(--radius); border: 1px solid var(--slate-200);
+      padding: 20px; transition: all var(--transition); cursor: pointer;
+    }
+    .doc-card:hover { box-shadow: var(--shadow); border-color: var(--teal-200); }
+    .doc-icon { font-size: 36px; margin-bottom: 12px; }
+    .doc-name { font-size: 14px; font-weight: 600; color: var(--slate-900); margin-bottom: 4px; word-break: break-word; }
+    .doc-desc { font-size: 12px; color: var(--slate-400); margin-bottom: 12px; }
+    .doc-date { font-size: 11px; color: var(--slate-400); }
+
+    /* Book form */
+    .book-card {
+      max-width: 640px; background: var(--white); border-radius: var(--radius-lg);
+      border: 1px solid var(--slate-200); padding: 36px;
+    }
+    .book-card h2 { font-size: 22px; font-weight: 800; color: var(--slate-900); margin-bottom: 6px; }
+    .book-card .sub { font-size: 14px; color: var(--slate-500); margin-bottom: 28px; }
+    .select-input {
+      width: 100%; padding: 12px 16px; border: 1.5px solid var(--slate-200);
+      border-radius: 10px; font-size: 15px; font-family: inherit;
+      color: var(--slate-900); background: var(--slate-50); outline: none;
+      transition: border-color var(--transition); appearance: none;
+    }
+    .select-input:focus { border-color: var(--teal-500); box-shadow: 0 0 0 3px rgba(6,182,212,.12); }
+    .textarea-input {
+      width: 100%; padding: 12px 16px; border: 1.5px solid var(--slate-200);
+      border-radius: 10px; font-size: 14px; font-family: inherit;
+      color: var(--slate-900); background: var(--slate-50); outline: none;
+      resize: vertical; min-height: 100px;
+      transition: border-color var(--transition);
+    }
+    .textarea-input:focus { border-color: var(--teal-500); box-shadow: 0 0 0 3px rgba(6,182,212,.12); }
+
+    /* Empty states */
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .empty-icon { font-size: 56px; margin-bottom: 16px; opacity: .5; }
+    .empty-title { font-size: 18px; font-weight: 700; color: var(--slate-700); margin-bottom: 8px; }
+    .empty-sub { font-size: 14px; color: var(--slate-400); margin-bottom: 24px; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: var(--slate-900); color: var(--white);
+      padding: 14px 20px; border-radius: 12px; font-size: 14px; font-weight: 500;
+      box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 10px;
+      animation: slideUp .3s ease; max-width: 320px;
+    }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--error); }
+    @keyframes slideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block; width: 20px; height: 20px;
+      border: 2.5px solid rgba(255,255,255,.3); border-top-color: var(--white);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Scroll reveal */
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; text-align: center; }
+      .hero-visual { display: none; }
+      .hero-actions { justify-content: center; }
+      .hero-trust { justify-content: center; }
+      .services-grid { grid-template-columns: repeat(2, 1fr); }
+      .doctors-grid { grid-template-columns: repeat(2, 1fr); }
+      .steps-grid { grid-template-columns: 1fr; gap: 20px; }
+      .step-connector { display: none; }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .dashboard-stats { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .services-grid { grid-template-columns: 1fr; }
+      .doctors-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .btn-lg { padding: 14px 24px; font-size: 15px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+      .appt-card { flex-direction: column; }
+      .docs-grid { grid-template-columns: repeat(2, 1fr); }
+      .tabs-inner { overflow-x: auto; }
+      .tab-btn { white-space: nowrap; padding: 14px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ NAV ═══════════════════════════════════════ -->
+<nav class="nav">
+  <div class="container">
+    <div class="nav-inner">
+      <a href="/portal" class="nav-logo">
+        <div class="nav-logo-icon">⚕</div>
+        TMASI Medical
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="#services" class="nav-link" onclick="scrollToSection('services')">Services</a>
+        <a href="#doctors" class="nav-link" onclick="scrollToSection('doctors')">Doctors</a>
+        <a href="#faq" class="nav-link" onclick="scrollToSection('faq')">FAQ</a>
+      </div>
+      <div class="nav-actions">
+        <span id="navUserName"></span>
+        <button class="btn btn-outline btn-sm" id="navSignIn" onclick="openAuth('signin')">Sign In</button>
+        <button class="btn btn-primary btn-sm hidden" id="navDashboard" onclick="showDashboardView()">My Portal</button>
+        <button class="btn btn-outline btn-sm hidden" id="navSignOut" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════ LANDING VIEW ═══════════════════════════════════════ -->
+<div id="landingView">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span>🌍</span> International Healthcare Excellence
+          </div>
+          <h1>Expert Medical Care,<br><span>Wherever You Are</span></h1>
+          <p class="hero-sub">
+            Connect with top specialists, track your health journey, and manage your appointments — all in one secure, beautifully designed portal.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-amber btn-lg" onclick="openAuth('register')">
+              Get Started Free
+            </button>
+            <a href="#doctors" class="btn btn-white btn-lg" onclick="scrollToSection('doctors')">
+              Meet Our Doctors
+            </a>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-card-stack">
+            <div class="hero-card hero-card-main">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px">👨‍⚕️</div>
+                <div>
+                  <div style="font-weight:700;font-size:15px">Dr. Ahmed Hassan</div>
+                  <div style="font-size:12px;color:#bae6fd">Cardiology · Available today</div>
+                </div>
+              </div>
+              <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-size:11px;color:#bae6fd;margin-bottom:2px">Your next appointment</div>
+                  <div style="font-size:16px;font-weight:700">Tue 17 Jun, 10:00 AM</div>
+                </div>
+                <div style="width:36px;height:36px;border-radius:50%;background:var(--teal-500);display:flex;align-items:center;justify-content:center">📅</div>
+              </div>
+            </div>
+            <div class="hero-card-float">
+              <div class="hc-label">Patients Served</div>
+              <div class="hc-value">5,000+</div>
+              <div class="hc-sub">Across 30+ countries 🌍</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-trust">
+        <div class="trust-item"><span class="trust-icon">🔒</span> HIPAA Compliant</div>
+        <div class="trust-item"><span class="trust-icon">🏥</span> Licensed Specialists</div>
+        <div class="trust-item"><span class="trust-icon">⭐</span> 98% Satisfaction</div>
+        <div class="trust-item"><span class="trust-icon">🌍</span> 30+ Countries Served</div>
+        <div class="trust-item"><span class="trust-icon">💬</span> 24/7 WhatsApp Support</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-num">5,000+</div>
+          <div class="stat-label">Patients Worldwide</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">20+</div>
+          <div class="stat-label">Medical Specialties</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">98%</div>
+          <div class="stat-label">Patient Satisfaction</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">30+</div>
+          <div class="stat-label">Countries Served</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Services -->
+  <section class="section" id="services">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">What We Offer</div>
+        <h2 class="section-title">Comprehensive Healthcare Services</h2>
+        <p class="section-sub">From specialist consultations to full medical tourism support — we handle every step of your healthcare journey.</p>
+      </div>
+      <div class="services-grid reveal">
+        <div class="service-card">
+          <div class="service-icon">🌍</div>
+          <h3>International Care</h3>
+          <p>Full-service medical tourism coordination including visa support, accommodation, and specialist access for international patients.</p>
+        </div>
+        <div class="service-card">
+          <div class="service-icon">📅</div>
+          <h3>Online Bookings</h3>
+          <p>Seamlessly schedule appointments with specialists. Choose your doctor, pick a time, and confirm — all in minutes.</p>
+        </div>
+        <div class="service-card">
+          <div class="service-icon">🚨</div>
+          <h3>Emergency Desk</h3>
+          <p>24/7 emergency support with immediate access to on-call specialists and rapid response coordination teams.</p>
+        </div>
+        <div class="service-card">
+          <div class="service-icon">🗣️</div>
+          <h3>Arabic Support</h3>
+          <p>Dedicated Arabic-speaking care coordinators and physicians to ensure clear communication and cultural comfort.</p>
+        </div>
+        <div class="service-card">
+          <div class="service-icon">🔄</div>
+          <h3>Follow-up Care</h3>
+          <p>Structured post-treatment follow-up plans, remote monitoring, and easy access to lab results and prescriptions.</p>
+        </div>
+        <div class="service-card">
+          <div class="service-icon">💻</div>
+          <h3>Virtual Consultations</h3>
+          <p>Connect with specialists from the comfort of home via secure video. Ideal for second opinions and ongoing care.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Doctors -->
+  <section class="section section-alt" id="doctors">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">Our Team</div>
+        <h2 class="section-title">Meet Our Specialists</h2>
+        <p class="section-sub">World-class physicians with international training, dedicated to delivering the highest standard of patient care.</p>
+      </div>
+      <div class="doctors-grid reveal" id="doctorsGrid">
+        <!-- Populated by JS -->
+        <div class="doctor-card">
+          <div class="doctor-avatar">👨‍⚕️</div>
+          <div class="doctor-body">
+            <span class="doctor-specialty">Loading…</span>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:36px" class="reveal">
+        <button class="btn btn-primary" onclick="openAuth('signin')">Book a Consultation</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="section">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">Simple Process</div>
+        <h2 class="section-title">Start in 3 Easy Steps</h2>
+        <p class="section-sub">Getting the care you need has never been easier. No account creation required — just your email.</p>
+      </div>
+      <div class="steps-grid reveal">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Sign In Instantly</h3>
+          <p>Enter your registered email. We'll send a one-time code — no passwords to remember, ever.</p>
+          <div class="step-connector"></div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Browse & Book</h3>
+          <p>Explore our specialists, view their availability, and submit a booking request in seconds.</p>
+          <div class="step-connector"></div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Track Your Journey</h3>
+          <p>View all your appointments, access test results and documents, and stay up to date — all in one place.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="section section-dark">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag" style="background:rgba(255,255,255,.1);color:#bae6fd">Patient Stories</div>
+        <h2 class="section-title" style="color:var(--white)">Trusted by Patients Worldwide</h2>
+      </div>
+      <div class="testimonials-grid reveal">
+        <div class="testimonial-card">
+          <div class="testimonial-stars">★★★★★</div>
+          <p class="testimonial-text">"The entire experience was incredible. From the first WhatsApp message to my last follow-up, every step was seamless. The doctors are world-class."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">M</div>
+            <div>
+              <div class="testimonial-name">Mohamed R.</div>
+              <div class="testimonial-country">🇸🇦 Saudi Arabia</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars">★★★★★</div>
+          <p class="testimonial-text">"I flew from the UK for a cardiac consultation. TMASI arranged everything — airport transfer, hotel, appointments. The patient portal kept me informed throughout."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">J</div>
+            <div>
+              <div class="testimonial-name">James T.</div>
+              <div class="testimonial-country">🇬🇧 United Kingdom</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars">★★★★★</div>
+          <p class="testimonial-text">"The Arabic-speaking coordinators made me feel completely at ease. I could ask questions in my language and get honest, clear answers every time."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar">F</div>
+            <div>
+              <div class="testimonial-name">Fatima A.</div>
+              <div class="testimonial-country">🇦🇪 UAE</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">FAQ</div>
+        <h2 class="section-title">Frequently Asked Questions</h2>
+        <p class="section-sub">Everything you need to know about your care at TMASI.</p>
+      </div>
+      <div class="faq-list reveal" id="faqList">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta-banner">
+    <div class="container">
+      <h2>Ready to Take Charge of Your Health?</h2>
+      <p>Join thousands of patients who trust TMASI for their healthcare needs.</p>
+      <div class="cta-actions">
+        <button class="btn btn-amber btn-lg" onclick="openAuth('signin')">Sign In to Your Portal</button>
+        <a href="https://wa.me/201000001001" target="_blank" class="btn btn-white btn-lg">
+          <span>💬</span> Chat on WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <div class="footer-logo-icon">⚕</div>
+            TMASI Medical Centre
+          </div>
+          <p class="footer-desc">Delivering world-class healthcare with compassion, innovation, and international expertise since 2010.</p>
+          <a href="https://wa.me/201000001001" target="_blank" class="footer-whatsapp">
+            <span>💬</span> WhatsApp Us
+          </a>
+        </div>
+        <div class="footer-col">
+          <h4>Services</h4>
+          <div class="footer-links">
+            <a href="#" class="footer-link">International Care</a>
+            <a href="#" class="footer-link">Appointments</a>
+            <a href="#" class="footer-link">Emergency Desk</a>
+            <a href="#" class="footer-link">Virtual Consults</a>
+            <a href="#" class="footer-link">Follow-up Care</a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Patient</h4>
+          <div class="footer-links">
+            <a href="#" class="footer-link" onclick="openAuth('signin')">Sign In</a>
+            <a href="#doctors" class="footer-link" onclick="scrollToSection('doctors')">Find a Doctor</a>
+            <a href="#faq" class="footer-link" onclick="scrollToSection('faq')">FAQ</a>
+            <a href="#" class="footer-link">Privacy Policy</a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Contact</h4>
+          <div class="footer-links">
+            <span class="footer-link">📍 Cairo, Egypt</span>
+            <a href="tel:+20212345678" class="footer-link">📞 +20 2 1234 5678</a>
+            <a href="mailto:info@tmasi.com" class="footer-link">✉️ info@tmasi.com</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span class="footer-copy">© 2025 TMASI Medical Centre. All rights reserved.</span>
+        <span>🔒 HIPAA Compliant &nbsp;·&nbsp; 🏥 Licensed & Regulated</span>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- /landingView -->
+
+<!-- ═══════════════════════════════════════ DASHBOARD VIEW ═══════════════════════════════════════ -->
+<div id="dashboardView" class="hidden">
+
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <div class="container">
+        <div class="dashboard-welcome">
+          <div class="greeting">Welcome back 👋</div>
+          <h1 id="dashPatientName">Loading…</h1>
+          <div class="sub" id="dashPatientInfo">Loading your profile…</div>
+        </div>
+        <div class="dashboard-stats">
+          <div class="dash-stat">
+            <div class="dash-stat-val" id="statUpcoming">—</div>
+            <div class="dash-stat-label">Upcoming Appointments</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-val" id="statTotal">—</div>
+            <div class="dash-stat-label">Total Appointments</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-val" id="statDocs">—</div>
+            <div class="dash-stat-label">My Documents</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-tabs">
+      <div class="container">
+        <div class="tabs-inner">
+          <button class="tab-btn active" onclick="switchTab('appointments',this)">📅 Appointments</button>
+          <button class="tab-btn" onclick="switchTab('documents',this)">📄 Documents</button>
+          <button class="tab-btn" onclick="switchTab('book',this)">➕ Book Appointment</button>
+          <button class="tab-btn" onclick="switchTab('profile',this)">👤 My Profile</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-content">
+      <div class="container">
+
+        <!-- Appointments tab -->
+        <div class="tab-panel active" id="tab-appointments">
+          <div id="appointmentsList" class="appointments-list">
+            <div class="empty-state">
+              <div class="spinner" style="margin:0 auto;border-color:rgba(8,145,178,.2);border-top-color:var(--teal-600);width:32px;height:32px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Documents tab -->
+        <div class="tab-panel" id="tab-documents">
+          <div id="documentsList" class="docs-grid">
+            <div class="empty-state">
+              <div class="spinner" style="margin:0 auto;border-color:rgba(8,145,178,.2);border-top-color:var(--teal-600);width:32px;height:32px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Book tab -->
+        <div class="tab-panel" id="tab-book">
+          <div class="book-card">
+            <h2>Request an Appointment</h2>
+            <p class="sub">Fill in your preferences and our team will confirm your booking via WhatsApp or email within 24 hours.</p>
+            <form id="bookForm" onsubmit="submitBooking(event)">
+              <div class="form-group">
+                <label class="form-label">Doctor (optional)</label>
+                <select class="select-input" id="bookDoctor">
+                  <option value="">— Any available doctor —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Service Type</label>
+                <select class="select-input" id="bookService">
+                  <option value="">— Select a service —</option>
+                  <option>International Care</option>
+                  <option>General Consultation</option>
+                  <option>Cardiology</option>
+                  <option>Pediatrics</option>
+                  <option>Follow-up Care</option>
+                  <option>Virtual Consultation</option>
+                  <option>Emergency</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Preferred Date & Time</label>
+                <input type="datetime-local" class="form-input" id="bookDate">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notes or Reason for Visit</label>
+                <textarea class="textarea-input" id="bookNotes" placeholder="Briefly describe your symptoms or the reason for this appointment…"></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full" id="bookSubmitBtn">
+                Submit Request
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Profile tab -->
+        <div class="tab-panel" id="tab-profile">
+          <div class="book-card">
+            <h2>My Profile</h2>
+            <p class="sub">Your registered information on file with TMASI Medical Centre.</p>
+            <div id="profileInfo" style="display:flex;flex-direction:column;gap:14px"></div>
+            <div style="margin-top:24px;padding-top:24px;border-top:1px solid var(--slate-200)">
+              <p style="font-size:13px;color:var(--slate-400)">Need to update your information? Contact us on WhatsApp and our team will assist you.</p>
+              <a href="https://wa.me/201000001001" target="_blank" class="btn btn-outline" style="margin-top:12px">
+                <span>💬</span> Contact via WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div><!-- /dashboardView -->
+
+<!-- ═══════════════════════════════════════ AUTH MODAL ═══════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="authModal" onclick="closeAuthOnOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+
+    <div class="modal-header">
+      <button class="modal-close" onclick="closeAuth()" aria-label="Close">✕</button>
+
+      <!-- Tab switcher (hidden during OTP step) -->
+      <div class="auth-tabs" id="authTabs">
+        <button class="auth-tab active" id="tabSignIn" onclick="switchAuthTab('signin')">Sign In</button>
+        <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Create Account</button>
+      </div>
+
+      <!-- Progress bar (shown during OTP step) -->
+      <div class="auth-progress hidden" id="authProgress">
+        <div class="auth-progress-bar" id="authProgressBar" style="width:50%"></div>
+      </div>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- ── SIGN IN: Step 1 — email ── -->
+      <div id="signinStep1">
+        <div class="form-group">
+          <label class="form-label" for="signinEmail">Email Address <span class="required">*</span></label>
+          <input type="email" class="form-input" id="signinEmail" placeholder="you@example.com"
+                 autocomplete="email" oninput="clearError('signinError')">
+          <div class="form-error hidden" id="signinError"></div>
+        </div>
+        <button class="btn btn-primary btn-full" id="signinSendBtn" onclick="sendLoginOTP()">
+          Send Login Code
+        </button>
+        <p class="auth-switch" style="margin-top:14px">
+          New patient? <span class="auth-link" onclick="switchAuthTab('register')">Create an account</span>
+        </p>
+      </div>
+
+      <!-- ── REGISTER: Step 1 — form ── -->
+      <div id="registerStep1" class="hidden">
+        <div class="form-group">
+          <label class="form-label" for="regName">Full Name <span class="required">*</span></label>
+          <input type="text" class="form-input" id="regName" placeholder="e.g. Ahmed Mohamed"
+                 autocomplete="name" oninput="clearError('regError')">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regEmail">Email Address <span class="required">*</span></label>
+          <input type="email" class="form-input" id="regEmail" placeholder="you@example.com"
+                 autocomplete="email" oninput="clearError('regError')">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regPhone">Phone Number <span class="required">*</span></label>
+          <input type="tel" class="form-input" id="regPhone" placeholder="+20 100 000 0000"
+                 autocomplete="tel" oninput="clearError('regError')">
+        </div>
+        <div class="form-group-row">
+          <div>
+            <label class="form-label" for="regCountry">Country</label>
+            <input type="text" class="form-input" id="regCountry" placeholder="e.g. Saudi Arabia" autocomplete="country-name">
+          </div>
+          <div>
+            <label class="form-label" for="regCity">City</label>
+            <input type="text" class="form-input" id="regCity" placeholder="e.g. Riyadh" autocomplete="address-level2">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regService">Service Interested In</label>
+          <select class="form-input" id="regService">
+            <option value="">— Select a service —</option>
+            <option>International Care</option>
+            <option>General Consultation</option>
+            <option>Cardiology</option>
+            <option>Pediatrics</option>
+            <option>Follow-up Care</option>
+            <option>Virtual Consultation</option>
+            <option>Emergency</option>
+          </select>
+        </div>
+        <div class="form-error hidden" id="regError"></div>
+        <button class="btn btn-primary btn-full" id="regSubmitBtn" onclick="submitRegistration()" style="margin-top:4px">
+          Create Account &amp; Verify Email
+        </button>
+        <p class="auth-switch">
+          Already have an account? <span class="auth-link" onclick="switchAuthTab('signin')">Sign in</span>
+        </p>
+      </div>
+
+      <!-- ── OTP VERIFICATION (shared by sign-in and register) ── -->
+      <div id="otpStep" class="hidden">
+        <div class="otp-header">
+          <div class="otp-icon" id="otpIcon">📧</div>
+          <h3 id="otpTitle">Check Your Email</h3>
+          <p id="otpSubtitle">We sent a 6-digit code to <strong id="otpEmailDisplay"></strong></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="text-align:center;display:block">Enter Verification Code</label>
+          <input type="text" class="form-input otp-input" id="otpCode"
+                 placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]*"
+                 autocomplete="one-time-code" oninput="onOTPInput(this)">
+          <div class="form-error hidden" id="otpError"></div>
+          <div class="form-hint" style="text-align:center;margin-top:8px">
+            Code expires in 10 minutes &nbsp;·&nbsp;
+            <span class="auth-link" onclick="goBackFromOTP()">Use different email</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" id="otpVerifyBtn" onclick="verifyOTP()">
+          Verify &amp; Continue
+        </button>
+        <p class="auth-switch">
+          Didn't receive it? <span class="auth-link" onclick="resendCurrentOTP()">Resend code</span>
+        </p>
+      </div>
+
+      <!-- ── SUCCESS STATE ── -->
+      <div id="authSuccess" class="hidden">
+        <div class="auth-success">
+          <div class="success-icon">✓</div>
+          <h3 id="successTitle">Welcome!</h3>
+          <p id="successMsg">You're now signed in. Taking you to your portal…</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════ STATE ═══════════════════════════
+let portalToken = localStorage.getItem('portal_token');
+let currentPatient = null;
+let allDoctors = [];
+
+// Auth state machine
+let authMode = 'signin';        // 'signin' | 'register'
+let authIdentifier = '';        // email being verified
+let authPurpose = 'login';      // 'login' | 'register' (mirrors OTP purpose)
+
+// ═══════════════════════════ INIT ═══════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  renderFAQ();
+  loadDoctors();
+  setupScrollReveal();
+
+  if (portalToken) {
+    try {
+      await fetchPatient();
+      showDashboardView();
+    } catch(e) {
+      localStorage.removeItem('portal_token');
+      portalToken = null;
+      showLandingView();
+    }
+  } else {
+    showLandingView();
+  }
+});
+
+// ═══════════════════════════ VIEW SWITCHING ═══════════════════════════
+function showLandingView() {
+  document.getElementById('landingView').classList.remove('hidden');
+  document.getElementById('dashboardView').classList.add('hidden');
+  document.getElementById('navSignIn').classList.remove('hidden');
+  document.getElementById('navDashboard').classList.add('hidden');
+  document.getElementById('navSignOut').classList.add('hidden');
+  document.getElementById('navUserName').textContent = '';
+}
+
+function showDashboardView() {
+  document.getElementById('landingView').classList.add('hidden');
+  document.getElementById('dashboardView').classList.remove('hidden');
+  document.getElementById('navSignIn').classList.add('hidden');
+  document.getElementById('navDashboard').classList.remove('hidden');
+  document.getElementById('navSignOut').classList.remove('hidden');
+  if (currentPatient) {
+    const firstName = currentPatient.name.split(' ')[0];
+    document.getElementById('navUserName').textContent = `Hello, ${firstName}`;
+    renderDashboard();
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════ NAV HELPERS ═══════════════════════════
+function scrollToSection(id) {
+  event.preventDefault();
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ═══════════════════════════ AUTH — MODAL MANAGEMENT ═══════════════════════════
+function openAuth(defaultTab) {
+  document.getElementById('authModal').classList.remove('hidden');
+  resetAuthModal();
+  if (defaultTab === 'register') {
+    switchAuthTab('register');
+  } else {
+    switchAuthTab('signin');
+  }
+}
+
+function closeAuth() {
+  document.getElementById('authModal').classList.add('hidden');
+}
+
+function closeAuthOnOverlay(e) {
+  if (e.target === document.getElementById('authModal')) closeAuth();
+}
+
+function resetAuthModal() {
+  // Show tabs, hide progress
+  show('authTabs'); hide('authProgress');
+  // Show correct first steps, hide OTP and success
+  show('signinStep1'); hide('registerStep1'); hide('otpStep'); hide('authSuccess');
+  // Clear all inputs and errors
+  ['signinEmail','regName','regEmail','regPhone','regCountry','regCity','otpCode'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.classList.remove('error'); }
+  });
+  const sel = document.getElementById('regService');
+  if (sel) sel.selectedIndex = 0;
+  ['signinError','regError','otpError'].forEach(clearError);
+}
+
+function switchAuthTab(tab) {
+  authMode = tab;
+  document.getElementById('tabSignIn').classList.toggle('active', tab === 'signin');
+  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+  if (tab === 'signin') {
+    show('signinStep1'); hide('registerStep1');
+    setTimeout(() => document.getElementById('signinEmail').focus(), 80);
+  } else {
+    hide('signinStep1'); show('registerStep1');
+    setTimeout(() => document.getElementById('regName').focus(), 80);
+  }
+  hide('otpStep'); hide('authSuccess');
+  show('authTabs'); hide('authProgress');
+  ['signinError','regError','otpError'].forEach(clearError);
+}
+
+function clearError(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('hidden'); el.textContent = ''; }
+  // Also remove .error from related input
+  const inputMap = { signinError: 'signinEmail', regError: null, otpError: 'otpCode' };
+  if (inputMap[id]) document.getElementById(inputMap[id])?.classList.remove('error');
+}
+
+function showFieldError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function showOTPStep(email, title, subtitle, iconEmoji, purpose) {
+  authIdentifier = email;
+  authPurpose = purpose;
+  // Hide tabs, show progress
+  hide('authTabs'); show('authProgress');
+  document.getElementById('authProgressBar').style.width = '60%';
+  // Hide form steps, show OTP
+  hide('signinStep1'); hide('registerStep1'); show('otpStep'); hide('authSuccess');
+  // Update OTP UI
+  document.getElementById('otpIcon').textContent = iconEmoji;
+  document.getElementById('otpTitle').textContent = title;
+  document.getElementById('otpSubtitle').innerHTML = subtitle;
+  document.getElementById('otpEmailDisplay').textContent = email;
+  document.getElementById('otpCode').value = '';
+  clearError('otpError');
+  setTimeout(() => document.getElementById('otpCode').focus(), 80);
+}
+
+function goBackFromOTP() {
+  resetAuthModal();
+  switchAuthTab(authMode);
+  // Pre-fill email in the form
+  if (authMode === 'signin') document.getElementById('signinEmail').value = authIdentifier;
+  else document.getElementById('regEmail').value = authIdentifier;
+}
+
+function onOTPInput(input) {
+  // Auto-submit when 6 digits entered
+  input.value = input.value.replace(/\D/g, '');
+  clearError('otpError');
+  if (input.value.length === 6) verifyOTP();
+}
+
+// ═══════════════════════════ AUTH — SIGN IN ═══════════════════════════
+async function sendLoginOTP() {
+  clearError('signinError');
+  const email = document.getElementById('signinEmail').value.trim().toLowerCase();
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    showFieldError('signinError', 'Please enter a valid email address.');
+    document.getElementById('signinEmail').classList.add('error');
+    return;
+  }
+  const btn = document.getElementById('signinSendBtn');
+  setLoading(btn, true, 'Sending…');
+  try {
+    await apiFetch('/api/portal/auth/request-otp', {
+      method: 'POST',
+      body: JSON.stringify({ identifier: email })
+    });
+    showOTPStep(
+      email,
+      'Check Your Email',
+      `We sent a 6-digit login code to <strong>${esc(email)}</strong>`,
+      '🔐',
+      'login'
+    );
+  } catch(e) {
+    showFieldError('signinError', e.message || 'Failed to send code. Please try again.');
+  } finally {
+    setLoading(btn, false, 'Send Login Code');
+  }
+}
+
+// ═══════════════════════════ AUTH — REGISTRATION ═══════════════════════════
+async function submitRegistration() {
+  clearError('regError');
+  const name    = document.getElementById('regName').value.trim();
+  const email   = document.getElementById('regEmail').value.trim().toLowerCase();
+  const phone   = document.getElementById('regPhone').value.trim();
+  const country = document.getElementById('regCountry').value.trim();
+  const city    = document.getElementById('regCity').value.trim();
+  const service = document.getElementById('regService').value;
+
+  // Client-side validation
+  if (!name || name.length < 2) {
+    showFieldError('regError', 'Please enter your full name.'); return;
+  }
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    showFieldError('regError', 'Please enter a valid email address.'); return;
+  }
+  if (!phone || phone.replace(/[\s\-+]/g,'').length < 7) {
+    showFieldError('regError', 'Please enter a valid phone number.'); return;
+  }
+
+  const btn = document.getElementById('regSubmitBtn');
+  setLoading(btn, true, 'Sending Verification…');
+  try {
+    await apiFetch('/api/portal/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ full_name: name, email, phone, country, city, service_type: service })
+    });
+    showOTPStep(
+      email,
+      'Verify Your Email',
+      `We sent a verification code to <strong>${esc(email)}</strong>`,
+      '📨',
+      'register'
+    );
+  } catch(e) {
+    if (e.message && e.message.toLowerCase().includes('already exists')) {
+      showFieldError('regError', e.message + ' — use the Sign In tab instead.');
+    } else {
+      showFieldError('regError', e.message || 'Registration failed. Please try again.');
+    }
+  } finally {
+    setLoading(btn, false, 'Create Account & Verify Email');
+  }
+}
+
+// ═══════════════════════════ AUTH — OTP VERIFY (shared) ═══════════════════════════
+async function verifyOTP() {
+  clearError('otpError');
+  const code = document.getElementById('otpCode').value.trim();
+  if (!code || code.length < 6) {
+    showFieldError('otpError', 'Please enter the full 6-digit code from your email.');
+    return;
+  }
+  const btn = document.getElementById('otpVerifyBtn');
+  setLoading(btn, true, 'Verifying…');
+  try {
+    const data = await apiFetch('/api/portal/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ identifier: authIdentifier, code })
+    });
+    portalToken = data.access_token;
+    currentPatient = data.patient;
+    localStorage.setItem('portal_token', portalToken);
+
+    // Show success state briefly, then enter dashboard
+    hide('otpStep');
+    show('authSuccess');
+    document.getElementById('authProgressBar').style.width = '100%';
+    const firstName = currentPatient.name.split(' ')[0];
+    document.getElementById('successTitle').textContent = data.is_new
+      ? `Welcome, ${firstName}!`
+      : `Welcome back, ${firstName}!`;
+    document.getElementById('successMsg').textContent = data.is_new
+      ? 'Your account has been created. Taking you to your portal…'
+      : 'You\'re signed in. Taking you to your portal…';
+
+    setTimeout(() => {
+      closeAuth();
+      showDashboardView();
+      showToast(
+        data.is_new ? `Account created! Welcome, ${firstName} 🎉` : `Welcome back, ${firstName}! 👋`,
+        'success'
+      );
+    }, 1800);
+  } catch(e) {
+    document.getElementById('otpCode').classList.add('error');
+    showFieldError('otpError', e.message || 'Invalid code. Please try again.');
+    setLoading(btn, false, 'Verify & Continue');
+  }
+}
+
+async function resendCurrentOTP() {
+  if (authPurpose === 'login') {
+    goBackFromOTP();
+    document.getElementById('signinEmail').value = authIdentifier;
+    await sendLoginOTP();
+  } else {
+    // Re-use registration info from the form (still populated)
+    goBackFromOTP();
+    await submitRegistration();
+  }
+}
+
+function signOut() {
+  localStorage.removeItem('portal_token');
+  portalToken = null;
+  currentPatient = null;
+  showLandingView();
+  showToast('You\'ve been signed out.', '');
+}
+
+// ═══════════════════════════ API ═══════════════════════════
+async function apiFetch(url, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (portalToken) headers['Authorization'] = `Bearer ${portalToken}`;
+  const resp = await fetch(url, { ...options, headers });
+  if (!resp.ok) {
+    let msg = 'An error occurred.';
+    try { const d = await resp.json(); msg = d.detail || msg; } catch(e) {}
+    throw new Error(msg);
+  }
+  return resp.json();
+}
+
+// ═══════════════════════════ PATIENT DATA ═══════════════════════════
+async function fetchPatient() {
+  currentPatient = await apiFetch('/api/portal/me');
+}
+
+// ═══════════════════════════ DASHBOARD ═══════════════════════════
+async function renderDashboard() {
+  if (!currentPatient) return;
+  const p = currentPatient;
+  document.getElementById('dashPatientName').textContent = p.name;
+  document.getElementById('dashPatientInfo').textContent = `${p.email || ''}${p.city ? ' · ' + p.city : ''}${p.country ? ', ' + p.country : ''}`;
+
+  // Profile tab
+  renderProfile(p);
+
+  // Load async data
+  loadAppointments();
+  loadDocuments();
+  populateBookDoctors();
+}
+
+function renderProfile(p) {
+  const fields = [
+    { label: 'Full Name', value: p.name },
+    { label: 'Email', value: p.email || '—' },
+    { label: 'Phone', value: p.phone || '—' },
+    { label: 'Country', value: p.country || '—' },
+    { label: 'City', value: p.city || '—' },
+    { label: 'Service', value: p.service_type || '—' },
+    { label: 'Status', value: p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1) : '—' },
+  ];
+  document.getElementById('profileInfo').innerHTML = fields.map(f => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--slate-100)">
+      <span style="font-size:13px;font-weight:600;color:var(--slate-500)">${f.label}</span>
+      <span style="font-size:14px;color:var(--slate-900);font-weight:500">${f.value}</span>
+    </div>
+  `).join('');
+}
+
+async function loadAppointments() {
+  const list = document.getElementById('appointmentsList');
+  try {
+    const appts = await apiFetch('/api/portal/appointments');
+    const now = new Date();
+    const upcoming = appts.filter(a => new Date(a.appointment_date) >= now && a.status !== 'cancelled');
+    document.getElementById('statUpcoming').textContent = upcoming.length;
+    document.getElementById('statTotal').textContent = appts.length;
+
+    if (!appts.length) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <div class="empty-title">No appointments yet</div>
+          <div class="empty-sub">Book your first consultation with one of our specialists.</div>
+          <button class="btn btn-primary" onclick="switchTab('book', document.querySelectorAll('.tab-btn')[2])">Book Appointment</button>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = appts.map(a => {
+      const dt = new Date(a.appointment_date);
+      const day = dt.getDate();
+      const month = dt.toLocaleString('en', { month: 'short' }).toUpperCase();
+      const time = dt.toLocaleString('en', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const statusClass = { scheduled: 'status-scheduled', confirmed: 'status-confirmed', completed: 'status-completed', cancelled: 'status-cancelled', no_show: 'status-cancelled' }[a.status] || 'status-scheduled';
+      const statusLabel = a.status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+      return `
+        <div class="appt-card">
+          <div class="appt-date-badge">
+            <div class="appt-day">${day}</div>
+            <div class="appt-month">${month}</div>
+          </div>
+          <div class="appt-info">
+            <div class="appt-title">${esc(a.title || a.service_type || 'Appointment')}</div>
+            <div class="appt-meta">${a.doctor_name ? '👨‍⚕️ ' + esc(a.doctor_name) + (a.doctor_specialty ? ' · ' + esc(a.doctor_specialty) : '') + ' &nbsp;·&nbsp; ' : ''}🕐 ${time}${a.clinic_name ? ' &nbsp;·&nbsp; 🏥 ' + esc(a.clinic_name) : ''}</div>
+            <span class="status-badge ${statusClass}">⬤ ${statusLabel}</span>
+            ${a.notes ? `<div style="font-size:13px;color:var(--slate-500);margin-top:8px">${esc(a.notes)}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Couldn't load appointments</div><div class="empty-sub">${esc(e.message)}</div></div>`;
+  }
+}
+
+async function loadDocuments() {
+  const grid = document.getElementById('documentsList');
+  try {
+    const docs = await apiFetch('/api/portal/documents');
+    document.getElementById('statDocs').textContent = docs.length;
+
+    if (!docs.length) {
+      grid.innerHTML = `
+        <div class="empty-state" style="grid-column:1/-1">
+          <div class="empty-icon">📄</div>
+          <div class="empty-title">No documents yet</div>
+          <div class="empty-sub">Your medical records, lab results, and reports will appear here once added by our team.</div>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = docs.map(d => {
+      const icon = getMimeIcon(d.mime_type);
+      const date = new Date(d.created_at).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' });
+      return `
+        <a href="${d.url}" target="_blank" class="doc-card">
+          <div class="doc-icon">${icon}</div>
+          <div class="doc-name">${esc(d.name)}</div>
+          <div class="doc-desc">${d.description ? esc(d.description) : 'Medical document'}</div>
+          <div class="doc-date">${date}</div>
+        </a>`;
+    }).join('');
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⚠️</div><div class="empty-title">Couldn't load documents</div></div>`;
+  }
+}
+
+async function populateBookDoctors() {
+  const sel = document.getElementById('bookDoctor');
+  try {
+    if (!allDoctors.length) {
+      allDoctors = await apiFetch('/api/portal/doctors');
+    }
+    allDoctors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name + (d.specialty ? ` — ${d.specialty}` : '');
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+
+async function submitBooking(e) {
+  e.preventDefault();
+  const btn = document.getElementById('bookSubmitBtn');
+  btn.innerHTML = '<span class="spinner"></span> Submitting…';
+  btn.disabled = true;
+
+  try {
+    const payload = {
+      doctor_id: document.getElementById('bookDoctor').value || null,
+      service_type: document.getElementById('bookService').value || null,
+      preferred_date: document.getElementById('bookDate').value || null,
+      notes: document.getElementById('bookNotes').value || null,
+    };
+    await apiFetch('/api/portal/appointments/request', { method: 'POST', body: JSON.stringify(payload) });
+    showToast('Appointment request submitted! We\'ll confirm via WhatsApp or email shortly.', 'success');
+    document.getElementById('bookForm').reset();
+    switchTab('appointments', document.querySelectorAll('.tab-btn')[0]);
+    await loadAppointments();
+  } catch(e) {
+    showToast(e.message || 'Failed to submit. Please try again.', 'error');
+  } finally {
+    btn.innerHTML = 'Submit Request';
+    btn.disabled = false;
+  }
+}
+
+// ═══════════════════════════ DOCTORS ═══════════════════════════
+async function loadDoctors() {
+  const grid = document.getElementById('doctorsGrid');
+  try {
+    allDoctors = await apiFetch('/api/portal/doctors');
+    if (!allDoctors.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--slate-400);padding:40px">Our doctor profiles are coming soon. Contact us to find the right specialist.</div>`;
+      return;
+    }
+    grid.innerHTML = allDoctors.map(d => {
+      const initials = d.name.split(' ').filter(Boolean).slice(0,2).map(w => w[0]).join('');
+      const avatarContent = d.photo_url
+        ? `<img src="${esc(d.photo_url)}" alt="${esc(d.name)}" onerror="this.parentElement.innerHTML='${initials}'">`
+        : initials;
+      return `
+        <div class="doctor-card">
+          <div class="doctor-avatar">${avatarContent}</div>
+          <div class="doctor-body">
+            <span class="doctor-specialty">${esc(d.specialty || 'Specialist')}</span>
+            <h3>${esc(d.name)}</h3>
+            ${d.bio ? `<p class="doctor-bio">${esc(d.bio)}</p>` : ''}
+            <div class="doctor-meta">
+              ${d.languages ? `<div class="doctor-meta-item"><span>🗣️</span><span>${esc(d.languages)}</span></div>` : ''}
+              ${d.clinic_name ? `<div class="doctor-meta-item"><span>🏥</span><span>${esc(d.clinic_name)}</span></div>` : ''}
+              ${d.consultation_fee_note ? `<div class="doctor-meta-item doctor-fee"><span>💰</span><span>${esc(d.consultation_fee_note)}</span></div>` : ''}
+            </div>
+          </div>
+          <div class="doctor-footer">
+            <button class="btn btn-primary btn-full" onclick="bookWithDoctor('${esc(d.id)}')">Book Consultation</button>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--slate-400);padding:40px">Unable to load doctors. Please try again later.</div>`;
+  }
+}
+
+function bookWithDoctor(doctorId) {
+  if (!portalToken) {
+    openAuth('signin');
+    return;
+  }
+  showDashboardView();
+  switchTab('book', document.querySelectorAll('.tab-btn')[2]);
+  setTimeout(() => {
+    const sel = document.getElementById('bookDoctor');
+    if (sel) sel.value = doctorId;
+  }, 300);
+}
+
+// ═══════════════════════════ TABS ═══════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById('tab-' + name);
+  if (panel) panel.classList.add('active');
+}
+
+// ═══════════════════════════ FAQ ═══════════════════════════
+const FAQ_DATA = [
+  { q: "How do I access my medical records and test results?", a: "After signing in to your portal, navigate to the 'Documents' tab. All your uploaded medical records, lab results, and treatment summaries are securely stored there and available to download at any time." },
+  { q: "Can I book an appointment directly through the portal?", a: "Yes! Once signed in, click the '+ Book Appointment' tab. Choose your preferred specialist, service type, and date. Our coordination team will confirm your booking within 24 hours via WhatsApp or email." },
+  { q: "How does the OTP login work? Is it safe?", a: "We send a one-time 6-digit code to your registered email address each time you sign in. The code expires after 10 minutes and can only be used once. This is more secure than traditional passwords and is used by leading banks and healthcare providers worldwide." },
+  { q: "What if I don't have an email address on file?", a: "Please contact our team on WhatsApp and we'll update your account with your email address so you can access the portal. You can also ask to be added as a new patient if you haven't visited us before." },
+  { q: "Is my health information private and secure?", a: "Absolutely. All data is encrypted in transit (TLS) and at rest. We follow HIPAA-compliant data handling practices, and access to your records is restricted to your care team only. We never share your data with third parties without your explicit consent." },
+  { q: "What languages are your doctors available in?", a: "Our team includes English and Arabic-speaking specialists. Several doctors also speak French and German. You can filter doctors by language when browsing our specialist directory, or contact us to match you with the right provider." },
+  { q: "Can I get a second opinion on my diagnosis?", a: "Yes — second opinion consultations are one of our most requested services, especially for international patients. Select 'General Consultation' when booking and note in the description that you're seeking a second opinion. Our team will pair you with the most appropriate specialist." },
+  { q: "How do I prepare for a virtual consultation?", a: "Ensure you have a stable internet connection and a device with a working camera and microphone. Gather any relevant documents, previous test results, or prescription lists beforehand. You'll receive a confirmation message with the video link 30 minutes before your appointment." },
+];
+
+function renderFAQ() {
+  document.getElementById('faqList').innerHTML = FAQ_DATA.map((item, i) => `
+    <div class="faq-item" id="faq-${i}">
+      <button class="faq-q" onclick="toggleFAQ(${i})">
+        ${esc(item.q)}
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        <div class="faq-a-inner">${esc(item.a)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleFAQ(i) {
+  const item = document.getElementById('faq-' + i);
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
+
+// ═══════════════════════════ SCROLL REVEAL ═══════════════════════════
+function setupScrollReveal() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+}
+
+// ═══════════════════════════ TOAST ═══════════════════════════
+function showToast(msg, type = '') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+  t.innerHTML = `<span>${icon}</span><span>${esc(msg)}</span>`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ═══════════════════════════ UTILS ═══════════════════════════
+function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+function setLoading(btn, loading, label) {
+  btn.disabled = loading;
+  btn.innerHTML = loading ? `<span class="spinner"></span> ${label}` : label;
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function getMimeIcon(mime) {
+  if (!mime) return '📄';
+  if (mime.startsWith('image/')) return '🖼️';
+  if (mime === 'application/pdf') return '📑';
+  if (mime.includes('word')) return '📝';
+  if (mime.includes('excel') || mime.includes('spreadsheet')) return '📊';
+  if (mime.startsWith('audio/')) return '🎵';
+  if (mime.startsWith('video/')) return '🎥';
+  return '📄';
+}
+</script>
+</body>
+</html>

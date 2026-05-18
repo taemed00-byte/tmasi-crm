@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: tmasi-crm
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash startup.sh
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: BOOTSTRAP_ADMIN_USERNAME
+        value: admin
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        value: tmasi_crm_webhook_verify
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_BUSINESS_ACCOUNT_ID
+        sync: false
+      - key: WHATSAPP_LINE_1_ID
+        sync: false
+      - key: WHATSAPP_LINE_1_LABEL
+        value: International Care
+      - key: WHATSAPP_LINE_1_DISPLAY_PHONE
+        sync: false
+      - key: WHATSAPP_LINE_2_ID
+        sync: false
+      - key: WHATSAPP_LINE_2_LABEL
+        value: Bookings
+      - key: WHATSAPP_LINE_2_DISPLAY_PHONE
+        sync: false
+      - key: WHATSAPP_LINE_3_ID
+        sync: false
+      - key: WHATSAPP_LINE_3_LABEL
+        value: Emergency Desk
+      - key: WHATSAPP_LINE_3_DISPLAY_PHONE
+        sync: false
+      - key: WHATSAPP_LINE_4_ID
+        sync: false
+      - key: WHATSAPP_LINE_4_LABEL
+        value: Arabic Support
+      - key: WHATSAPP_LINE_4_DISPLAY_PHONE
+        sync: false
+      - key: WHATSAPP_LINE_5_ID
+        sync: false
+      - key: WHATSAPP_LINE_5_LABEL
+        value: Follow-up Care
+      - key: WHATSAPP_LINE_5_DISPLAY_PHONE
+        sync: false

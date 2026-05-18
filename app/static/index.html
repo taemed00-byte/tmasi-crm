@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TMASI CRM Application</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ── Login Screen ──────────────────────────────────────── -->
+<div id="loginScreen" class="hidden">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>TMASI CRM Application</h1>
+      <p>Healthcare Operations Platform</p>
+    </div>
+    <form class="login-form" id="loginForm">
+      <div class="field">
+        <label for="loginUsername">Username</label>
+        <input type="text" id="loginUsername" autocomplete="username" required placeholder="Enter username">
+      </div>
+      <div class="field">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required placeholder="Enter password">
+      </div>
+      <div class="login-error" id="loginError"></div>
+      <button type="submit" class="btn-login">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── App Shell ─────────────────────────────────────────── -->
+<div id="app" class="hidden">
+
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="sidebar-brand">
+      <h2>TMASI CRM</h2>
+      <p>Healthcare Operations</p>
+    </div>
+    <div class="sidebar-user">
+      <strong id="sidebarUsername">—</strong>
+      <span id="sidebarRole"></span>
+    </div>
+    <div class="sidebar-nav">
+      <button class="nav-item active" data-view="whatsapp" onclick="switchView('whatsapp')">
+        <span class="nav-icon">💬</span> WhatsApp Client
+      </button>
+      <button class="nav-item" data-view="patients" onclick="switchView('patients')">
+        <span class="nav-icon">👥</span> Patients
+      </button>
+      <button class="nav-item" data-view="calendar" onclick="switchView('calendar')">
+        <span class="nav-icon">📅</span> Calendar
+      </button>
+      <button class="nav-item" data-view="bookings" onclick="switchView('bookings')">
+        <span class="nav-icon">📋</span> Booking
+      </button>
+      <button class="nav-item" data-view="doctors" onclick="switchView('doctors')">
+        <span class="nav-icon">🩺</span> Doctors
+      </button>
+      <button class="nav-item" data-view="clinics" onclick="switchView('clinics')">
+        <span class="nav-icon">🏥</span> Clinics
+      </button>
+      <button class="nav-item" data-view="users" onclick="switchView('users')">
+        <span class="nav-icon">👤</span> Users
+      </button>
+    </div>
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="doLogout()">
+        <span class="nav-icon">🚪</span> Sign Out
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Workspace -->
+  <div id="workspace">
+
+    <!-- ── WhatsApp View ───────────────────────────────── -->
+    <div id="whatsappView" class="view active">
+      <div id="waWorkspace">
+
+        <!-- Number Rail -->
+        <div id="waRail"></div>
+
+        <!-- Conversation List -->
+        <div id="convList">
+          <div class="conv-list-header">
+            <h3 id="convListTitle">Conversations</h3>
+            <input type="search" id="convSearch" placeholder="Search conversations…">
+          </div>
+          <div class="conv-filters">
+            <button class="filter-btn active" data-filter="open">Open</button>
+            <button class="filter-btn" data-filter="pending">Pending</button>
+            <button class="filter-btn" data-filter="resolved">Resolved</button>
+          </div>
+          <div id="convItems"></div>
+        </div>
+
+        <!-- Chat + Patient Drawer -->
+        <div id="caseDetail" class="empty-state">
+
+          <!-- Empty state -->
+          <div class="empty-state-content">
+            <div class="empty-icon">💬</div>
+            <p>Select a conversation to begin</p>
+          </div>
+
+          <!-- Chat Column -->
+          <div id="chatColumn">
+            <div id="chatHeader"></div>
+            <div id="chatBody"></div>
+            <div id="chatComposer">
+              <button class="composer-btn note-btn" id="noteBtn" title="Toggle internal note">📝</button>
+              <button class="composer-btn" id="attachBtn" title="Attach file">➕</button>
+              <input type="file" id="fileInput" style="display:none" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt">
+              <textarea id="composerInput" rows="1" placeholder="Type a message…"></textarea>
+              <button class="composer-btn send" id="sendBtn" title="Send (Enter)">➤</button>
+            </div>
+          </div>
+
+          <!-- Patient Drawer -->
+          <div id="patientDrawer"></div>
+
+        </div><!-- #caseDetail -->
+      </div><!-- #waWorkspace -->
+    </div><!-- #whatsappView -->
+
+    <!-- ── Patients View ───────────────────────────────── -->
+    <div id="patientsView" class="view">
+      <div class="patients-sidebar">
+        <div class="patients-sidebar-header">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <h3 style="font-size:13px;font-weight:600;margin:0">Patients</h3>
+            <button class="btn btn-primary btn-sm" onclick="showNewPatientModal()">+ New</button>
+          </div>
+          <input type="search" id="patientSearch" placeholder="Search patients…">
+        </div>
+        <div id="patientsList"></div>
+      </div>
+      <div class="patient-detail-panel">
+        <div id="patientDetailPanel" style="flex:1;overflow-y:auto">
+          <div class="empty-state-content">
+            <div class="empty-icon">👥</div>
+            <p>Select a patient</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Calendar View ───────────────────────────────── -->
+    <div id="calendarView" class="view">
+      <div class="page-header">
+        <h2>Calendar</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-secondary" id="calPrev">← Prev</button>
+          <span id="calWeekLabel" style="font-size:13px;font-weight:500"></span>
+          <button class="btn btn-secondary" id="calToday">Today</button>
+          <button class="btn btn-secondary" id="calNext">Next →</button>
+          <button class="btn btn-primary" onclick="showNewBookingModal(null)">+ New Booking</button>
+        </div>
+      </div>
+      <div class="page-content">
+        <div id="calGrid"></div>
+        <div id="apptDetailPanel"></div>
+      </div>
+    </div>
+
+    <!-- ── Bookings View ───────────────────────────────── -->
+    <div id="bookingsView" class="view">
+      <div class="page-header">
+        <h2>Bookings</h2>
+        <button class="btn btn-primary" onclick="loadPatients().then(function(){showNewBookingModal(null);})">+ New Booking</button>
+      </div>
+      <div class="page-content">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr>
+              <th>Patient</th><th>Doctor</th><th>Clinic</th>
+              <th>Date</th><th>Service</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsTable">
+            <tr><td colspan="7" class="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Doctors View ───────────────────────────────── -->
+    <div id="doctorsView" class="view">
+      <div class="page-header">
+        <h2>Doctors</h2>
+        <button class="btn btn-primary" onclick="showNewDoctorModal()">+ Add Doctor</button>
+      </div>
+      <div class="page-content">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr><th>Name</th><th>Specialty</th><th>Clinic</th><th>Phone</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="doctorsTable">
+            <tr><td colspan="5" class="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Clinics View ───────────────────────────────── -->
+    <div id="clinicsView" class="view">
+      <div class="page-header">
+        <h2>Clinics</h2>
+        <button class="btn btn-primary" onclick="showNewClinicModal()">+ Add Clinic</button>
+      </div>
+      <div class="page-content">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr><th>Name</th><th>Location</th><th>Phone</th><th>Specialties</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="clinicsTable">
+            <tr><td colspan="5" class="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Users View ─────────────────────────────────── -->
+    <div id="usersView" class="view">
+      <div class="page-header">
+        <h2>Users</h2>
+        <button class="btn btn-primary" onclick="showNewUserModal()">+ Add User</button>
+      </div>
+      <div class="page-content">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="usersTable">
+            <tr><td colspan="5" class="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- #workspace -->
+</div><!-- #app -->
+
+<!-- ── Modal ─────────────────────────────────────────────── -->
+<div id="modalOverlay" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modalTitle">Modal</h3>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modalCancel">Cancel</button>
+      <button class="btn btn-primary" id="modalSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
