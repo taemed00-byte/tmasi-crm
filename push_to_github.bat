@@ -11,8 +11,8 @@ for %%L in (
     ".git\index.lock"
     ".git\config.lock"
     ".git\HEAD.lock"
-    ".git\MERGE_HEAD"
     ".git\COMMIT_EDITMSG.lock"
+    ".git\MERGE_HEAD"
 ) do (
     if exist "%%L" (
         echo  [FIX] Removing %%L...
@@ -24,7 +24,7 @@ REM ── Configure git identity ───────────────�
 git config user.email "taemed00@gmail.com"
 git config user.name "taemed00-byte"
 
-REM ── Set PAT-authenticated remote ──────────────────────────
+REM ── Configure remote (stored in .git/config, never committed) ──
 git remote set-url origin https://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@github.com/taemed00-byte/tmasi-crm.git
 
 REM ── Stage everything ──────────────────────────────────────
@@ -34,29 +34,28 @@ if errorlevel 1 (
     pause & exit /b 1
 )
 
-REM ── Show what's staged ────────────────────────────────────
+REM ── Show staged summary ───────────────────────────────────
 echo.
-echo  Staged changes:
 git diff --cached --stat
 echo.
 
-REM ── Commit (skip if nothing changed) ──────────────────────
+REM ── Commit if there are changes ───────────────────────────
 git diff --cached --quiet
-if %errorlevel% == 0 (
-    echo  [INFO] Nothing new to commit - pushing existing commits.
-    goto :push
-)
-git commit -m "Phase 2: Network, Clients, Documents, Audit Trail, Business Rules Engine"
-if errorlevel 1 (
-    echo  [ERROR] git commit failed.
-    pause & exit /b 1
+if %errorlevel% neq 0 (
+    git commit -m "Phase 2: Network, Clients, Documents, Audit Trail, Business Rules Engine"
+    if errorlevel 1 (
+        echo  [ERROR] Commit failed.
+        pause & exit /b 1
+    )
 )
 
-:push
 REM ── Push ──────────────────────────────────────────────────
 git push origin main
 if errorlevel 1 (
-    echo  [ERROR] Push failed. Check output above.
+    echo.
+    echo  [TIP] If blocked by secret scanning, visit the unblock URL
+    echo  shown above in the output, then run this script again.
+    echo.
     pause & exit /b 1
 )
 
