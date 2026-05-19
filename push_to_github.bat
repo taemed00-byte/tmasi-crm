@@ -25,7 +25,7 @@ git config user.email "taemed00@gmail.com"
 git config user.name "taemed00-byte"
 
 REM ── Configure remote (stored in .git/config, never committed) ──
-git remote set-url origin https://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@github.com/taemed00-byte/tmasi-crm.git
+git remote set-url origin https://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@github.com/taemed00-byte/tmasi-crm.git
 
 REM ── Stage everything ──────────────────────────────────────
 git add -A
