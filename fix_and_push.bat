@@ -77,9 +77,10 @@ if %errorlevel% neq 0 (
     echo  [INFO] No changes to commit, pushing existing commits...
 )
 
-REM ── Push ──────────────────────────────────────────────────
+REM ── Push (bypass Windows Credential Manager) ─────────────
 echo  Pushing to GitHub...
-git push origin main
+set GIT_TERMINAL_PROMPT=0
+git -c credential.helper= push origin main
 if errorlevel 1 (
     echo  [ERROR] Push failed. See above.
     pause & exit /b 1
