@@ -140,6 +140,9 @@ function switchView(view) {
   else if (view === 'doctors') loadDoctors();
   else if (view === 'clinics') loadClinics();
   else if (view === 'users') loadUsers();
+  else if (view === 'cases') loadCases();
+  else if (view === 'finance') { loadInvoices(); loadFinanceKpis(); }
+  else if (view === 'reports') loadReports();
 }
 
 // ── WhatsApp Lines ─────────────────────────────────────────
@@ -815,7 +818,7 @@ async function loadUsers() {
 
 function showNewUserModal() {
   document.getElementById('modalTitle').textContent = 'Add User';
-  document.getElementById('modalBody').innerHTML = '<div class="field"><label>Username *</label><input id="usr_username"></div><div class="field"><label>Password *</label><input id="usr_password" type="password"></div><div class="field"><label>Full Name</label><input id="usr_fullname"></div><div class="field"><label>Email</label><input id="usr_email" type="email"></div><div class="field"><label>Role</label><select id="usr_role"><option value="agent">Agent</option><option value="clinic_admin">Clinic Admin</option><option value="doctor">Doctor</option><option value="super_admin">Super Admin</option></select></div>';
+  document.getElementById('modalBody').innerHTML = '<div class="field"><label>Username *</label><input id="usr_username"></div><div class="field"><label>Password *</label><input id="usr_password" type="password"></div><div class="field"><label>Full Name</label><input id="usr_fullname"></div><div class="field"><label>Email</label><input id="usr_email" type="email"></div><div class="field"><label>Role</label><select id="usr_role"><option value="agent">Agent</option><option value="case_manager">Case Manager</option><option value="finance">Finance</option><option value="clinic_admin">Clinic Admin</option><option value="doctor">Doctor</option><option value="super_admin">Super Admin</option></select></div>';
   document.getElementById('modalSaveBtn').onclick = async function() {
     var u = document.getElementById('usr_username').value.trim();
     var p = document.getElementById('usr_password').value;
@@ -830,7 +833,7 @@ function showNewUserModal() {
 
 function showEditUserModal(id, username, fullName, email, role) {
   document.getElementById('modalTitle').textContent = 'Edit User: ' + username;
-  document.getElementById('modalBody').innerHTML = '<div class="field"><label>Full Name</label><input id="usr_fullname" value="' + escHtml(fullName) + '"></div><div class="field"><label>Email</label><input id="usr_email" value="' + escHtml(email) + '"></div><div class="field"><label>Role</label><select id="usr_role"><option value="agent"' + (role==='agent'?' selected':'') + '>Agent</option><option value="clinic_admin"' + (role==='clinic_admin'?' selected':'') + '>Clinic Admin</option><option value="doctor"' + (role==='doctor'?' selected':'') + '>Doctor</option><option value="super_admin"' + (role==='super_admin'?' selected':'') + '>Super Admin</option></select></div><div class="field"><label>New Password (leave blank to keep)</label><input id="usr_password" type="password"></div>';
+  document.getElementById('modalBody').innerHTML = '<div class="field"><label>Full Name</label><input id="usr_fullname" value="' + escHtml(fullName) + '"></div><div class="field"><label>Email</label><input id="usr_email" value="' + escHtml(email) + '"></div><div class="field"><label>Role</label><select id="usr_role"><option value="agent"' + (role==='agent'?' selected':'') + '>Agent</option><option value="case_manager"' + (role==='case_manager'?' selected':'') + '>Case Manager</option><option value="finance"' + (role==='finance'?' selected':'') + '>Finance</option><option value="clinic_admin"' + (role==='clinic_admin'?' selected':'') + '>Clinic Admin</option><option value="doctor"' + (role==='doctor'?' selected':'') + '>Doctor</option><option value="super_admin"' + (role==='super_admin'?' selected':'') + '>Super Admin</option></select></div><div class="field"><label>New Password (leave blank to keep)</label><input id="usr_password" type="password"></div>';
   document.getElementById('modalSaveBtn').onclick = async function() {
     var body = { full_name: document.getElementById('usr_fullname').value.trim() || null, email: document.getElementById('usr_email').value.trim() || null, role: document.getElementById('usr_role').value };
     var pw = document.getElementById('usr_password').value;
@@ -913,3 +916,524 @@ document.addEventListener('DOMContentLoaded', async function() {
   else document.getElementById('loginScreen').classList.remove('hidden');
   setInterval(function() { if (window.scrollX !== 0 || document.body.scrollLeft !== 0) resetHScroll(); }, 500);
 });
+
+
+// ════════════════════════════════════════════════════════════
+// CASES
+// ════════════════════════════════════════════════════════════
+
+const CaseState = { filter: 'open', selectedId: null, debounceTimer: null };
+
+function setCaseFilter(f, btn) {
+  CaseState.filter = f;
+  document.querySelectorAll('[data-cfilter]').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  loadCases();
+}
+
+function debouncedLoadCases() {
+  clearTimeout(CaseState.debounceTimer);
+  CaseState.debounceTimer = setTimeout(loadCases, 350);
+}
+
+async function loadCases() {
+  var listEl = document.getElementById('casesList');
+  listEl.innerHTML = '<div class="loading">Loading…</div>';
+  var search = (document.getElementById('caseSearch') && document.getElementById('caseSearch').value) || '';
+  var params = 'limit=100&skip=0';
+  if (CaseState.filter === 'open') params += '&status_group=open';
+  if (CaseState.filter === 'closed') params += '&status_group=closed';
+  if (search) params += '&search=' + encodeURIComponent(search);
+  try {
+    var result = await api('/api/cases?' + params);
+    var items = (result && result.items) || [];
+    listEl.innerHTML = '';
+    if (!items.length) { listEl.innerHTML = '<div class="loading">No cases found</div>'; return; }
+    items.forEach(function(c) {
+      var el = document.createElement('div');
+      el.className = 'case-list-item' + (c.id === CaseState.selectedId ? ' active' : '');
+      el.innerHTML =
+        '<div class="case-num">' + escHtml(c.case_number) + '</div>' +
+        '<div class="case-title">' + escHtml(c.title) + '</div>' +
+        '<div class="case-meta">' +
+          '<span class="case-badge badge-status-' + (c.status||'') + '">' + escHtml(c.status||'') + '</span>' +
+          '<span class="case-badge badge-priority-' + (c.priority||'') + '">' + escHtml(c.priority||'') + '</span>' +
+          (c.patient_name ? '<span style="font-size:10px;color:#666">' + escHtml(c.patient_name) + '</span>' : '') +
+        '</div>';
+      el.addEventListener('click', function() { openCase(c.id); });
+      listEl.appendChild(el);
+    });
+  } catch(err) {
+    listEl.innerHTML = '<div class="error-msg">' + escHtml(err.message) + '</div>';
+  }
+}
+
+async function openCase(caseId) {
+  CaseState.selectedId = caseId;
+  // Highlight in list
+  document.querySelectorAll('.case-list-item').forEach(function(el) { el.classList.remove('active'); });
+  document.querySelectorAll('.case-list-item').forEach(function(el) {
+    if (el.querySelector('.case-num') && el.querySelector('.case-num').parentElement === el) {
+      // check by re-rendering is simpler
+    }
+  });
+  loadCases(); // re-render list with active highlight
+
+  var panel = document.getElementById('caseDetailPanel');
+  panel.innerHTML = '<div class="case-detail-inner"><div class="loading">Loading case…</div></div>';
+  try {
+    var c = await api('/api/cases/' + caseId);
+    renderCaseDetail(c);
+  } catch(err) {
+    panel.innerHTML = '<div class="case-detail-inner"><div class="error-msg">' + escHtml(err.message) + '</div></div>';
+  }
+}
+
+function renderCaseDetail(c) {
+  var panel = document.getElementById('caseDetailPanel');
+  var assigneeLabel = c.assignee_name || 'Unassigned';
+  var slaStr = c.sla_due_at ? new Date(c.sla_due_at).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+  var slaClass = c.sla_breached ? 'color:#b71c1c;font-weight:600' : '';
+
+  panel.innerHTML =
+    '<div class="case-detail-inner">' +
+    '<div class="case-detail-header">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
+        '<h3>' + escHtml(c.title) + '</h3>' +
+        '<span style="font-size:10px;color:#999;white-space:nowrap">' + escHtml(c.case_number) + '</span>' +
+      '</div>' +
+      '<div class="case-detail-meta">' +
+        '<span class="case-badge badge-status-' + c.status + '">' + escHtml(c.status) + '</span>' +
+        '<span class="case-badge badge-priority-' + c.priority + '">' + escHtml(c.priority) + '</span>' +
+        '<span class="case-badge" style="background:#e3f2fd;color:#1565c0">' + escHtml(c.type) + '</span>' +
+      '</div>' +
+      '<div class="case-info-grid" style="margin:10px 0">' +
+        '<div class="case-info-item"><label>Patient</label>' + escHtml(c.patient_name || '—') + '</div>' +
+        '<div class="case-info-item"><label>Assigned To</label>' + escHtml(assigneeLabel) + '</div>' +
+        '<div class="case-info-item"><label>Doctor</label>' + escHtml(c.doctor_name || '—') + '</div>' +
+        '<div class="case-info-item"><label>Clinic</label>' + escHtml(c.clinic_name || '—') + '</div>' +
+        '<div class="case-info-item"><label>Country</label>' + escHtml(c.country_of_origin || '—') + '</div>' +
+        '<div class="case-info-item"><label>SLA Due</label><span style="' + slaClass + '">' + slaStr + '</span></div>' +
+        '<div class="case-info-item"><label>Est. Cost</label>' + (c.estimated_cost ? escHtml(c.currency + ' ' + c.estimated_cost.toLocaleString()) : '—') + '</div>' +
+        '<div class="case-info-item"><label>Tasks</label>' + c.tasks_done + ' / ' + c.tasks_total + '</div>' +
+      '</div>' +
+      '<div class="case-detail-actions">' +
+        '<select class="btn btn-secondary btn-sm" onchange="caseStatusChange(\'' + c.id + '\',this)" style="font-size:11px">' +
+          ['intake','triage','active','pending_provider','pending_patient','treatment','follow_up','closed','cancelled'].map(function(s) {
+            return '<option value="' + s + '"' + (c.status===s?' selected':'') + '>' + s + '</option>';
+          }).join('') +
+        '</select>' +
+        '<button class="btn btn-secondary btn-sm" onclick="showAddNoteModal(\'' + c.id + '\')">+ Note</button>' +
+        '<button class="btn btn-secondary btn-sm" onclick="showAddTaskModal(\'' + c.id + '\')">+ Task</button>' +
+        '<button class="btn btn-primary btn-sm" onclick="showEscalateModal(\'' + c.id + '\')">⬆ Escalate</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="case-tabs">' +
+      '<button class="case-tab active" onclick="switchCaseTab(this,\'notes\')">Notes (' + (c.notes||[]).length + ')</button>' +
+      '<button class="case-tab" onclick="switchCaseTab(this,\'tasks\')">Tasks (' + (c.tasks||[]).length + ')</button>' +
+      '<button class="case-tab" onclick="switchCaseTab(this,\'info\')">Details</button>' +
+    '</div>' +
+    '<div id="caseTabNotes" class="case-tab-content active">' + renderNotesList(c.notes || []) + '</div>' +
+    '<div id="caseTabTasks" class="case-tab-content">' + renderTasksList(c.tasks || [], c.id) + '</div>' +
+    '<div id="caseTabInfo" class="case-tab-content">' + renderCaseInfo(c) + '</div>' +
+    '</div>';
+}
+
+function switchCaseTab(btn, tab) {
+  document.querySelectorAll('.case-tab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.case-tab-content').forEach(function(el) { el.classList.remove('active'); });
+  var el = document.getElementById('caseTab' + cap(tab));
+  if (el) el.classList.add('active');
+}
+
+function renderNotesList(notes) {
+  if (!notes.length) return '<p style="color:#999;font-size:12px;padding:10px 0">No notes yet.</p>';
+  return notes.map(function(n) {
+    var cls = n.note_type === 'escalation' ? 'escalation' : (!n.is_internal ? 'external' : '');
+    return '<div class="case-note ' + cls + '">' +
+      '<div class="case-note-header">' +
+        '<span><span class="case-note-author">' + escHtml(n.author_name||'System') + '</span>' +
+          ' <span class="case-note-type">' + escHtml(n.note_type) + '</span>' +
+          (n.is_internal ? '' : ' <span class="case-note-type" style="background:#e8f5e9;color:#2e7d32">external</span>') +
+        '</span>' +
+        '<span>' + (n.created_at ? relTime(n.created_at) : '') + '</span>' +
+      '</div>' +
+      '<div>' + escHtml(n.body) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderTasksList(tasks, caseId) {
+  if (!tasks.length) return '<p style="color:#999;font-size:12px;padding:10px 0">No tasks yet.</p>';
+  return tasks.map(function(t) {
+    var done = t.status === 'done';
+    return '<div class="case-task' + (done?' done':'') + '">' +
+      '<input type="checkbox" class="task-check"' + (done?' checked':'') +
+        ' onchange="toggleTask(\'' + (caseId||t.case_id) + '\',\'' + t.id + '\',this.checked)">' +
+      '<div class="task-body">' +
+        '<div class="task-title">' + escHtml(t.title) + '</div>' +
+        '<div class="task-meta">' +
+          (t.assignee_name ? 'Assigned to ' + escHtml(t.assignee_name) + ' · ' : '') +
+          (t.due_at ? 'Due ' + new Date(t.due_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderCaseInfo(c) {
+  return '<div class="case-info-grid" style="margin-top:6px">' +
+    '<div class="case-info-item"><label>Service Type</label>' + escHtml(c.service_type || '—') + '</div>' +
+    '<div class="case-info-item"><label>Insurance</label>' + escHtml(c.insurance_provider || '—') + '</div>' +
+    '<div class="case-info-item"><label>Policy #</label>' + escHtml(c.insurance_policy_number || '—') + '</div>' +
+    '<div class="case-info-item"><label>Pre-auth</label>' + (c.insurance_pre_auth ? 'Yes' : 'No') + '</div>' +
+    '<div class="case-info-item"><label>Opened</label>' + (c.opened_at ? new Date(c.opened_at).toLocaleString('en-GB') : '—') + '</div>' +
+    '<div class="case-info-item"><label>Closed</label>' + (c.closed_at ? new Date(c.closed_at).toLocaleString('en-GB') : 'Open') + '</div>' +
+    '</div>';
+}
+
+async function caseStatusChange(caseId, sel) {
+  var newStatus = sel.value;
+  try {
+    await api('/api/cases/' + caseId + '/status', { method: 'POST', body: JSON.stringify({ status: newStatus }) });
+    toast('Status updated to ' + newStatus, 'success');
+    openCase(caseId);
+  } catch(err) { toast(err.message, 'error'); sel.value = sel.dataset.prev || sel.value; }
+}
+
+async function toggleTask(caseId, taskId, checked) {
+  try {
+    await api('/api/cases/' + caseId + '/tasks/' + taskId, {
+      method: 'PUT',
+      body: JSON.stringify({ status: checked ? 'done' : 'pending' })
+    });
+    openCase(caseId);
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+function showAddNoteModal(caseId) {
+  document.getElementById('modalTitle').textContent = 'Add Note';
+  document.getElementById('modalBody').innerHTML =
+    '<div class="field"><label>Note</label><textarea id="noteBody" rows="4" placeholder="Write your note…" style="width:100%;resize:vertical"></textarea></div>' +
+    '<div class="field"><label>Type</label><select id="noteType"><option value="general">General</option><option value="medical">Medical</option><option value="financial">Financial</option><option value="escalation">Escalation</option></select></div>' +
+    '<div class="field"><label><input type="checkbox" id="noteInternal" checked> Internal (staff only)</label></div>';
+  document.getElementById('modalSaveBtn').onclick = async function() {
+    var body = document.getElementById('noteBody').value.trim();
+    if (!body) { toast('Note cannot be empty', 'error'); return; }
+    try {
+      await api('/api/cases/' + caseId + '/notes', { method: 'POST', body: JSON.stringify({
+        body: body,
+        note_type: document.getElementById('noteType').value,
+        is_internal: document.getElementById('noteInternal').checked,
+      })});
+      closeModal(); toast('Note added', 'success'); openCase(caseId);
+    } catch(err) { toast(err.message, 'error'); }
+  };
+  showModal();
+}
+
+function showAddTaskModal(caseId) {
+  document.getElementById('modalTitle').textContent = 'Add Task';
+  document.getElementById('modalBody').innerHTML =
+    '<div class="field"><label>Title</label><input id="taskTitle" placeholder="Task title"></div>' +
+    '<div class="field"><label>Description (optional)</label><textarea id="taskDesc" rows="2" style="width:100%"></textarea></div>' +
+    '<div class="field"><label>Due Date (optional)</label><input id="taskDue" type="datetime-local"></div>';
+  document.getElementById('modalSaveBtn').onclick = async function() {
+    var title = document.getElementById('taskTitle').value.trim();
+    if (!title) { toast('Title required', 'error'); return; }
+    var due = document.getElementById('taskDue').value;
+    try {
+      await api('/api/cases/' + caseId + '/tasks', { method: 'POST', body: JSON.stringify({
+        title: title,
+        description: document.getElementById('taskDesc').value.trim() || null,
+        due_at: due ? new Date(due).toISOString() : null,
+      })});
+      closeModal(); toast('Task added', 'success'); openCase(caseId);
+    } catch(err) { toast(err.message, 'error'); }
+  };
+  showModal();
+}
+
+function showEscalateModal(caseId) {
+  document.getElementById('modalTitle').textContent = 'Escalate Case';
+  document.getElementById('modalBody').innerHTML =
+    '<div class="field"><label>Reason</label><textarea id="escReason" rows="3" placeholder="Describe the escalation reason…" style="width:100%"></textarea></div>';
+  document.getElementById('modalSaveBtn').onclick = async function() {
+    var reason = document.getElementById('escReason').value.trim();
+    if (!reason) { toast('Reason required', 'error'); return; }
+    try {
+      var r = await api('/api/cases/' + caseId + '/escalate', { method: 'POST', body: JSON.stringify({ reason: reason }) });
+      closeModal(); toast('Case escalated — priority now ' + (r && r.new_priority || ''), 'success'); openCase(caseId);
+    } catch(err) { toast(err.message, 'error'); }
+  };
+  showModal();
+}
+
+function showNewCaseModal() {
+  var patientOpts = State.patients.length
+    ? State.patients.map(function(p) { return '<option value="' + p.id + '">' + escHtml(p.name) + ' (' + escHtml(p.phone) + ')</option>'; }).join('')
+    : '<option value="">— load patients first —</option>';
+  document.getElementById('modalTitle').textContent = 'New Case';
+  document.getElementById('modalBody').innerHTML =
+    '<div class="field"><label>Patient *</label><select id="casePatient" style="width:100%"><option value="">Select patient…</option>' + patientOpts + '</select></div>' +
+    '<div class="field"><label>Title *</label><input id="caseTitle" placeholder="Brief case title"></div>' +
+    '<div class="field"><label>Type</label><select id="caseType"><option value="international_care">International Care</option><option value="medical_tourism">Medical Tourism</option><option value="local_booking">Local Booking</option><option value="emergency">Emergency</option><option value="second_opinion">Second Opinion</option><option value="insurance_claim">Insurance Claim</option><option value="teleconsultation">Teleconsultation</option></select></div>' +
+    '<div class="field"><label>Priority</label><select id="casePriority"><option value="normal">Normal</option><option value="low">Low</option><option value="high">High</option><option value="urgent">Urgent</option><option value="critical">Critical</option></select></div>' +
+    '<div class="field"><label>Description</label><textarea id="caseDesc" rows="2" style="width:100%"></textarea></div>' +
+    '<div class="field"><label>Country of Origin</label><input id="caseCountry" placeholder="e.g. Saudi Arabia"></div>' +
+    '<div class="field"><label>Est. Cost (USD)</label><input id="caseCost" type="number" placeholder="0"></div>';
+  document.getElementById('modalSaveBtn').onclick = async function() {
+    var patId = document.getElementById('casePatient').value;
+    var title = document.getElementById('caseTitle').value.trim();
+    if (!patId) { toast('Select a patient', 'error'); return; }
+    if (!title) { toast('Title required', 'error'); return; }
+    var cost = parseFloat(document.getElementById('caseCost').value) || null;
+    try {
+      var c = await api('/api/cases', { method: 'POST', body: JSON.stringify({
+        patient_id: patId, title: title,
+        type: document.getElementById('caseType').value,
+        priority: document.getElementById('casePriority').value,
+        description: document.getElementById('caseDesc').value.trim() || null,
+        country_of_origin: document.getElementById('caseCountry').value.trim() || null,
+        estimated_cost: cost, currency: 'USD',
+      })});
+      closeModal(); toast('Case ' + c.case_number + ' created', 'success');
+      loadCases(); openCase(c.id);
+    } catch(err) { toast(err.message, 'error'); }
+  };
+  showModal();
+  if (!State.patients.length) loadPatients();
+}
+
+
+// ════════════════════════════════════════════════════════════
+// FINANCE
+// ════════════════════════════════════════════════════════════
+
+async function loadFinanceKpis() {
+  try {
+    var s = await api('/api/finance/summary');
+    var kpis = document.getElementById('financeKpis');
+    if (!kpis) return;
+    kpis.innerHTML =
+      '<div class="kpi-card"><div class="kpi-label">Total Billed</div><div class="kpi-value blue">$' + (s.total_billed||0).toLocaleString() + '</div></div>' +
+      '<div class="kpi-card"><div class="kpi-label">Collected</div><div class="kpi-value green">$' + (s.total_collected||0).toLocaleString() + '</div></div>' +
+      '<div class="kpi-card"><div class="kpi-label">Outstanding</div><div class="kpi-value orange">$' + (s.outstanding||0).toLocaleString() + '</div></div>' +
+      '<div class="kpi-card"><div class="kpi-label">Paid Invoices</div><div class="kpi-value">' + ((s.by_status&&s.by_status.paid)||0) + '</div></div>' +
+      '<div class="kpi-card"><div class="kpi-label">Overdue</div><div class="kpi-value" style="color:#b71c1c">' + ((s.by_status&&s.by_status.overdue)||0) + '</div></div>';
+  } catch(e) { console.warn('Finance KPIs:', e); }
+}
+
+async function loadInvoices() {
+  var tbody = document.getElementById('invoicesTable');
+  tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading…</td></tr>';
+  var status = document.getElementById('invoiceStatusFilter') ? document.getElementById('invoiceStatusFilter').value : '';
+  var params = 'limit=100&skip=0' + (status ? '&status=' + status : '');
+  try {
+    var result = await api('/api/finance/invoices?' + params);
+    var items = (result && result.items) || [];
+    if (!items.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading">No invoices found</td></tr>'; return; }
+    tbody.innerHTML = items.map(function(inv) {
+      var statusCls = 'inv-' + (inv.status||'draft');
+      var balance = (inv.balance_due||0);
+      var dueDateStr = inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—';
+      return '<tr>' +
+        '<td><strong>' + escHtml(inv.invoice_number) + '</strong></td>' +
+        '<td>' + escHtml(inv.patient_name||'—') + '</td>' +
+        '<td>' + escHtml(inv.currency) + ' ' + (inv.total_amount||0).toLocaleString() + '</td>' +
+        '<td style="color:#2e7d32">' + (inv.paid_amount||0).toLocaleString() + '</td>' +
+        '<td style="color:' + (balance>0?'#e65100':'#2e7d32') + '">' + balance.toLocaleString() + '</td>' +
+        '<td><span class="invoice-status ' + statusCls + '">' + escHtml(inv.status) + '</span></td>' +
+        '<td>' + dueDateStr + '</td>' +
+        '<td style="white-space:nowrap">' +
+          '<button class="btn btn-secondary btn-sm" onclick="openInvoiceDetail(\'' + inv.id + '\')">View</button> ' +
+          '<button class="btn btn-primary btn-sm" onclick="showRecordPaymentModal(\'' + inv.id + '\',' + balance + ',\'' + escHtml(inv.currency) + '\')">Pay</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  } catch(err) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="error-msg">' + escHtml(err.message) + '</div></td></tr>';
+  }
+}
+
+async function openInvoiceDetail(invoiceId) {
+  try {
+    var inv = await api('/api/finance/invoices/' + invoiceId);
+    document.getElementById('modalTitle').textContent = 'Invoice ' + inv.invoice_number;
+    var itemsHtml = (inv.items||[]).map(function(it) {
+      return '<tr><td>' + escHtml(it.description) + '</td><td>' + it.quantity + '</td>' +
+        '<td>' + (it.unit_price||0).toLocaleString() + '</td>' +
+        '<td><strong>' + (it.total||0).toLocaleString() + '</strong></td></tr>';
+    }).join('');
+    var paymentsHtml = (inv.payments||[]).map(function(p) {
+      return '<tr><td>' + escHtml(p.method) + '</td><td>' + (p.amount||0).toLocaleString() + ' ' + escHtml(p.currency||'') + '</td>' +
+        '<td>' + escHtml(p.receiver_name||'') + '</td>' +
+        '<td>' + (p.received_at ? new Date(p.received_at).toLocaleDateString('en-GB') : '') + '</td></tr>';
+    }).join('');
+    document.getElementById('modalBody').innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:12px">' +
+        '<div><label style="font-weight:600">Patient:</label> ' + escHtml(inv.patient_name||'—') + '</div>' +
+        '<div><label style="font-weight:600">Status:</label> <span class="invoice-status inv-' + inv.status + '">' + inv.status + '</span></div>' +
+        '<div><label style="font-weight:600">Currency:</label> ' + escHtml(inv.currency) + '</div>' +
+        '<div><label style="font-weight:600">Due Date:</label> ' + (inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-GB') : '—') + '</div>' +
+      '</div>' +
+      '<h4 style="font-size:12px;margin-bottom:6px">Line Items</h4>' +
+      '<table class="data-table" style="width:100%;margin-bottom:12px"><thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>' + (itemsHtml||'<tr><td colspan="4" style="color:#999">No items</td></tr>') + '</tbody></table>' +
+      '<div style="text-align:right;font-size:13px;margin-bottom:12px">' +
+        'Subtotal: <strong>' + (inv.subtotal||0).toLocaleString() + '</strong> &nbsp;' +
+        'Tax: <strong>' + (inv.tax_amount||0).toLocaleString() + '</strong> &nbsp;' +
+        'Discount: <strong>' + (inv.discount_amount||0).toLocaleString() + '</strong> &nbsp;' +
+        '<strong>Total: ' + escHtml(inv.currency) + ' ' + (inv.total_amount||0).toLocaleString() + '</strong>' +
+      '</div>' +
+      '<h4 style="font-size:12px;margin-bottom:6px">Payments</h4>' +
+      '<table class="data-table" style="width:100%"><thead><tr><th>Method</th><th>Amount</th><th>Received By</th><th>Date</th></tr></thead><tbody>' + (paymentsHtml||'<tr><td colspan="4" style="color:#999">No payments recorded</td></tr>') + '</tbody></table>' +
+      '<div style="margin-top:10px;font-size:13px;text-align:right">Paid: <strong style="color:#2e7d32">' + (inv.paid_amount||0).toLocaleString() + '</strong> &nbsp; Balance: <strong style="color:#e65100">' + (inv.balance_due||0).toLocaleString() + '</strong></div>';
+    document.getElementById('modalSaveBtn').textContent = 'Record Payment';
+    document.getElementById('modalSaveBtn').onclick = function() { closeModal(); showRecordPaymentModal(inv.id, inv.balance_due, inv.currency); };
+    showModal();
+  } catch(err) { toast(err.message, 'error'); }
+}
+
+function showRecordPaymentModal(invoiceId, balanceDue, currency) {
+  document.getElementById('modalTitle').textContent = 'Record Payment';
+  document.getElementById('modalSaveBtn').textContent = 'Save';
+  document.getElementById('modalBody').innerHTML =
+    '<div class="field"><label>Amount (' + escHtml(currency||'USD') + ')</label><input id="payAmount" type="number" step="0.01" value="' + (balanceDue||0) + '" min="0.01"></div>' +
+    '<div class="field"><label>Payment Method</label><select id="payMethod"><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank Transfer</option><option value="insurance">Insurance</option><option value="other">Other</option></select></div>' +
+    '<div class="field"><label>Reference # (optional)</label><input id="payRef" placeholder="Receipt or bank reference"></div>' +
+    '<div class="field"><label>Notes (optional)</label><input id="payNotes"></div>';
+  document.getElementById('modalSaveBtn').onclick = async function() {
+    var amount = parseFloat(document.getElementById('payAmount').value);
+    if (!amount || amount <= 0) { toast('Enter a valid amount', 'error'); return; }
+    try {
+      await api('/api/finance/invoices/' + invoiceId + '/payments', { method: 'POST', body: JSON.stringify({
+        amount: amount,
+        currency: currency || 'USD',
+        method: document.getElementById('payMethod').value,
+        reference_number: document.getElementById('payRef').value.trim() || null,
+        notes: document.getElementById('payNotes').value.trim() || null,
+      })});
+      closeModal(); toast('Payment recorded', 'success'); loadInvoices(); loadFinanceKpis();
+    } catch(err) { toast(err.message, 'error'); }
+  };
+  showModal();
+}
+
+function showNewInvoiceModal() {
+  var patientOpts = State.patients.length
+    ? State.patients.map(function(p) { return '<option value="' + p.id + '">' + escHtml(p.name) + ' (' + escHtml(p.phone) + ')</option>'; }).join('')
+    : '<option value="">— load patients first —</option>';
+  document.getElementById('modalTitle').textContent = 'New Invoice';
+  document.getElementById('modalSaveBtn').textContent = 'Create';
+  document.getElementById('modalBody').innerHTML =
+    '<div class="field"><label>Patient *</label><select id="invPatient" style="width:100%"><option value="">Select patient…</option>' + patientOpts + '</select></div>' +
+    '<div class="field"><label>Currency</label><select id="invCurrency"><option value="USD">USD</option><option value="EGP">EGP</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="SAR">SAR</option><option value="AED">AED</option></select></div>' +
+    '<div class="field"><label>Tax Amount</label><input id="invTax" type="number" step="0.01" value="0"></div>' +
+    '<div class="field"><label>Discount Amount</label><input id="invDiscount" type="number" step="0.01" value="0"></div>' +
+    '<div class="field"><label>Due Date</label><input id="invDue" type="date"></div>' +
+    '<div class="field"><label>Notes</label><input id="invNotes" placeholder="Internal notes…"></div>' +
+    '<p style="font-size:11px;color:#666;margin-top:4px">You can add line items after creating the invoice.</p>';
+  document.getElementById('modalSaveBtn').onclick = async function() {
+    var patId = document.getElementById('invPatient').value;
+    if (!patId) { toast('Select a patient', 'error'); return; }
+    var due = document.getElementById('invDue').value;
+    try {
+      var inv = await api('/api/finance/invoices', { method: 'POST', body: JSON.stringify({
+        patient_id: patId,
+        currency: document.getElementById('invCurrency').value,
+        tax_amount: parseFloat(document.getElementById('invTax').value)||0,
+        discount_amount: parseFloat(document.getElementById('invDiscount').value)||0,
+        due_date: due ? new Date(due).toISOString() : null,
+        notes: document.getElementById('invNotes').value.trim() || null,
+        items: [],
+      })});
+      closeModal(); toast('Invoice ' + inv.invoice_number + ' created', 'success');
+      loadInvoices(); loadFinanceKpis();
+      openInvoiceDetail(inv.id);
+    } catch(err) { toast(err.message, 'error'); }
+  };
+  showModal();
+  if (!State.patients.length) loadPatients();
+}
+
+
+// ════════════════════════════════════════════════════════════
+// REPORTS
+// ════════════════════════════════════════════════════════════
+
+async function loadReports() {
+  try {
+    var stats = await api('/api/reports/dashboard');
+    renderReportsDashboard(stats, container);
+  } catch(err) {
+    container.innerHTML = '<div class="error-msg">' + escHtml(err.message) + '</div>';
+  }
+}
+
+function renderReportsDashboard(s, container) {
+  var c = s.cases || {}, p = s.patients || {}, f = s.finance || {}, w = s.whatsapp || {};
+
+  var kpiHtml =
+    '<div class="reports-grid">' +
+      statCard('Open Cases', c.open||0, 'Cases being actively managed') +
+      statCard('Cases Today', c.today||0, 'New cases opened today') +
+      statCard('SLA Breached', c.sla_breached||0, 'Active cases past SLA', c.sla_breached > 0 ? '#b71c1c' : null) +
+      statCard('SLA At Risk', c.sla_at_risk||0, 'Due within 4 hours', c.sla_at_risk > 0 ? '#e65100' : null) +
+      statCard('Total Patients', p.total||0, 'All-time') +
+      statCard('New Patients', p.new_this_month||0, 'This month') +
+      statCard('Revenue (mo)', '$' + ((f.revenue_this_month||0)).toLocaleString(), 'Payments received this month', '#2e7d32') +
+      statCard('Outstanding', '$' + ((f.outstanding||0)).toLocaleString(), 'Unpaid invoices', f.outstanding > 0 ? '#e65100' : null) +
+      statCard('Open Chats', w.open_conversations||0, 'WhatsApp inbox') +
+      statCard('Messages Today', w.messages_today||0, 'Inbound + outbound') +
+    '</div>';
+
+  var statusHtml = '<div class="chart-card"><h4>Cases by Status</h4>' +
+    '<table class="data-table" style="width:100%"><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody>' +
+    Object.entries(c.by_status||{}).map(function(e) {
+      return '<tr><td><span class="case-badge badge-status-' + e[0] + '">' + e[0] + '</span></td><td><strong>' + e[1] + '</strong></td></tr>';
+    }).join('') +
+    '</tbody></table></div>';
+
+  var priorityHtml = '<div class="chart-card"><h4>Open Cases by Priority</h4>' +
+    '<table class="data-table" style="width:100%"><thead><tr><th>Priority</th><th>Count</th></tr></thead><tbody>' +
+    Object.entries(c.by_priority||{}).map(function(e) {
+      return '<tr><td><span class="case-badge badge-priority-' + e[0] + '">' + e[0] + '</span></td><td><strong>' + e[1] + '</strong></td></tr>';
+    }).join('') +
+    '</tbody></table></div>';
+
+  var countriesHtml = '<div class="chart-card"><h4>Top Patient Countries</h4>' +
+    '<table class="data-table" style="width:100%"><thead><tr><th>Country</th><th>Patients</th></tr></thead><tbody>' +
+    (p.top_countries||[]).map(function(row) {
+      return '<tr><td>' + escHtml(row.country||'Unknown') + '</td><td>' + row.count + '</td></tr>';
+    }).join('') +
+    (!(p.top_countries||[]).length ? '<tr><td colspan="2" class="loading">No data</td></tr>' : '') +
+    '</tbody></table></div>';
+
+  var monthly = (c.monthly||[]);
+  var maxCount = Math.max.apply(null, monthly.map(function(m){ return m.count||0; })) || 1;
+  var barsHtml = '<div class="chart-card"><h4>New Cases - Last 6 Months</h4>' +
+    '<div style="display:flex;align-items:flex-end;gap:8px;height:80px;padding-top:10px">' +
+    monthly.map(function(m) {
+      var h = Math.round(((m.count||0)/maxCount)*70);
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">' +
+        '<span style="font-size:10px;font-weight:600;color:#333">' + (m.count||0) + '</span>' +
+        '<div style="width:100%;height:' + h + 'px;background:var(--color-primary);border-radius:3px 3px 0 0;min-height:2px"></div>' +
+        '<span style="font-size:9px;color:#999;white-space:nowrap">' + escHtml(m.label) + '</span>' +
+      '</div>';
+    }).join('') +
+    '</div></div>';
+
+  container.innerHTML =
+    kpiHtml +
+    '<div class="chart-row">' + barsHtml + statusHtml + '</div>' +
+    '<div class="chart-row">' + priorityHtml + countriesHtml + '</div>';
+}
+
+function statCard(label, value, sub, color) {
+  return '<div class="stat-card">' +
+    '<div class="stat-label">' + escHtml(label) + '</div>' +
+    '<div class="stat-value"' + (color ? ' style="color:' + color + '"' : '') + '>' + escHtml(String(value)) + '</div>' +
+    '<div class="stat-sub">' + escHtml(sub||'') + '</div>' +
+  '</div>';
+}

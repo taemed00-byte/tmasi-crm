@@ -25,12 +25,27 @@ def _safe_migrate(db: Session):
     """Add new columns to existing tables without Alembic — idempotent."""
     from sqlalchemy import text
     new_cols = [
-        ("doctors",             "photo_url",             "VARCHAR(500)"),
-        ("doctors",             "languages",             "VARCHAR(300)"),
-        ("doctors",             "consultation_fee_note", "VARCHAR(200)"),
-        ("doctors",             "available_on_portal",   "BOOLEAN DEFAULT TRUE"),
-        ("patient_portal_otps", "purpose",               "VARCHAR(20) DEFAULT 'login'"),
-        ("patient_portal_otps", "pending_data",          "TEXT"),
+        # Doctor portal fields
+        ("doctors",             "photo_url",              "VARCHAR(500)"),
+        ("doctors",             "languages",              "VARCHAR(300)"),
+        ("doctors",             "consultation_fee_note",  "VARCHAR(200)"),
+        ("doctors",             "available_on_portal",    "BOOLEAN DEFAULT TRUE"),
+        # Portal OTP extended fields
+        ("patient_portal_otps", "purpose",                "VARCHAR(20) DEFAULT 'login'"),
+        ("patient_portal_otps", "pending_data",           "TEXT"),
+        # Patient extended demographics
+        ("patients",            "date_of_birth",          "VARCHAR(20)"),
+        ("patients",            "nationality",            "VARCHAR(100)"),
+        ("patients",            "passport_number",        "VARCHAR(100)"),
+        ("patients",            "medical_record_number",  "VARCHAR(100)"),
+        ("patients",            "language_preference",    "VARCHAR(100)"),
+        ("patients",            "insurance_provider",     "VARCHAR(200)"),
+        ("patients",            "insurance_policy_number","VARCHAR(100)"),
+        ("patients",            "notes_internal",         "TEXT"),
+        # User extended fields
+        ("users",               "department",             "VARCHAR(100)"),
+        ("users",               "phone_extension",        "VARCHAR(50)"),
+        ("users",               "last_active_at",         "DATETIME"),
     ]
     for table, col, col_type in new_cols:
         try:

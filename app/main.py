@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
 from app import models  # registers all models
-from app.routers import auth, whatsapp, patients, doctors, clinics, bookings, users, media, portal
+from app.routers import auth, whatsapp, patients, doctors, clinics, bookings, users, media, portal, cases, finance, reports
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -36,6 +36,9 @@ app.include_router(bookings.router)
 app.include_router(users.router)
 app.include_router(media.router)
 app.include_router(portal.router)
+app.include_router(cases.router)
+app.include_router(finance.router)
+app.include_router(reports.router)
 
 # Health check
 @app.get("/api/health")

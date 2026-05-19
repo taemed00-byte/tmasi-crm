@@ -5,9 +5,13 @@ from app.models.doctor import Doctor
 from app.models.clinic import Clinic
 from app.models.appointment import Appointment
 from app.models.portal import PatientPortalOTP
+from app.models.case import Case, CaseNote, CaseTask, CaseEscalation
+from app.models.finance import Invoice, InvoiceItem, Payment
 
 __all__ = [
     "User", "WhatsAppLine", "Conversation", "Message", "MediaFile",
     "Patient", "PatientDocument", "Doctor", "Clinic", "Appointment",
     "PatientPortalOTP",
+    "Case", "CaseNote", "CaseTask", "CaseEscalation",
+    "Invoice", "InvoiceItem", "Payment",
 ]

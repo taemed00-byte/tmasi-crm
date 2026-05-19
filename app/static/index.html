@@ -65,6 +65,16 @@
       <button class="nav-item" data-view="users" onclick="switchView('users')">
         <span class="nav-icon">👤</span> Users
       </button>
+      <div class="nav-divider"></div>
+      <button class="nav-item" data-view="cases" onclick="switchView('cases')">
+        <span class="nav-icon">🗂️</span> Cases
+      </button>
+      <button class="nav-item" data-view="finance" onclick="switchView('finance')">
+        <span class="nav-icon">💳</span> Finance
+      </button>
+      <button class="nav-item" data-view="reports" onclick="switchView('reports')">
+        <span class="nav-icon">📊</span> Reports
+      </button>
     </div>
     <div class="sidebar-footer">
       <button class="nav-item" onclick="doLogout()">
@@ -238,6 +248,77 @@
             <tr><td colspan="5" class="loading">Loading…</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ── Cases View ────────────────────────────────────── -->
+    <div id="casesView" class="view">
+      <div class="cases-sidebar">
+        <div class="cases-sidebar-header">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <h3 style="font-size:13px;font-weight:600;margin:0">Cases</h3>
+            <button class="btn btn-primary btn-sm" onclick="showNewCaseModal()">+ New</button>
+          </div>
+          <input type="search" id="caseSearch" placeholder="Search cases…" oninput="debouncedLoadCases()">
+          <div class="conv-filters" style="margin-top:6px">
+            <button class="filter-btn active" data-cfilter="open" onclick="setCaseFilter('open',this)">Open</button>
+            <button class="filter-btn" data-cfilter="all" onclick="setCaseFilter('all',this)">All</button>
+            <button class="filter-btn" data-cfilter="closed" onclick="setCaseFilter('closed',this)">Closed</button>
+          </div>
+        </div>
+        <div id="casesList"></div>
+      </div>
+      <div class="case-detail-panel" id="caseDetailPanel">
+        <div class="empty-state-content">
+          <div class="empty-icon">🗂️</div>
+          <p>Select a case to view details</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Finance View ───────────────────────────────────── -->
+    <div id="financeView" class="view">
+      <div class="page-header">
+        <h2>Finance</h2>
+        <div style="display:flex;gap:8px">
+          <select id="invoiceStatusFilter" class="btn btn-secondary" style="padding:5px 10px;font-size:12px" onchange="loadInvoices()">
+            <option value="">All Statuses</option>
+            <option value="draft">Draft</option>
+            <option value="sent">Sent</option>
+            <option value="partial">Partial</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+            <option value="void">Void</option>
+          </select>
+          <button class="btn btn-primary" onclick="showNewInvoiceModal()">+ New Invoice</button>
+        </div>
+      </div>
+      <!-- Finance KPI strip -->
+      <div id="financeKpis" style="display:flex;gap:12px;padding:0 20px 14px;flex-shrink:0"></div>
+      <div class="page-content">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr>
+              <th>Invoice #</th><th>Patient</th><th>Total</th>
+              <th>Paid</th><th>Balance</th><th>Status</th>
+              <th>Due Date</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="invoicesTable">
+            <tr><td colspan="8" class="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Reports View ───────────────────────────────────── -->
+    <div id="reportsView" class="view" style="overflow-y:auto">
+      <div class="page-header">
+        <h2>Reports &amp; Analytics</h2>
+        <button class="btn btn-secondary" onclick="loadReports()">↻ Refresh</button>
+      </div>
+      <div id="reportsContent" style="padding:0 20px 30px">
+        <div class="loading">Loading analytics…</div>
       </div>
     </div>
 
