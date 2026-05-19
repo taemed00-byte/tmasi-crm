@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional, List
+from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status, Cookie
@@ -61,11 +61,11 @@ def get_current_user_optional(
 
 
 # ── Role-based access control ─────────────────────────────────────
-ADMIN_ROLES = {UserRole.super_admin}
-MANAGER_ROLES = {UserRole.super_admin, UserRole.admin}
-FINANCE_ROLES = {UserRole.super_admin, UserRole.admin, UserRole.finance}
-CASE_ROLES = {UserRole.super_admin, UserRole.admin, UserRole.agent, UserRole.case_manager}
-ALL_STAFF = set(UserRole)
+ADMIN_ROLES   = {UserRole.super_admin, UserRole.clinic_admin}
+MANAGER_ROLES = {UserRole.super_admin, UserRole.clinic_admin}
+FINANCE_ROLES = {UserRole.super_admin, UserRole.clinic_admin, UserRole.finance}
+CASE_ROLES    = {UserRole.super_admin, UserRole.clinic_admin, UserRole.agent, UserRole.case_manager}
+ALL_STAFF     = set(UserRole)
 
 
 def require_roles(*roles: UserRole):
@@ -75,7 +75,7 @@ def require_roles(*roles: UserRole):
         if current_user.role not in allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. Required roles: {[r.value for r in allowed]}",
+                detail="Access denied for your role.",
             )
         return current_user
     return checker
