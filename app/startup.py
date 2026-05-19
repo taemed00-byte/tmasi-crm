@@ -45,7 +45,7 @@ def _safe_migrate(db: Session):
         # User extended fields
         ("users",               "department",             "VARCHAR(100)"),
         ("users",               "phone_extension",        "VARCHAR(50)"),
-        ("users",               "last_active_at",         "DATETIME"),
+        ("users",               "last_active_at",         "TIMESTAMP"),
     ]
     for table, col, col_type in new_cols:
         try:
