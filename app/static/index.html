@@ -75,6 +75,16 @@
       <button class="nav-item" data-view="reports" onclick="switchView('reports')">
         <span class="nav-icon">📊</span> Reports
       </button>
+      <div class="nav-divider"></div>
+      <button class="nav-item" data-view="network" onclick="switchView('network')">
+        <span class="nav-icon">🏨</span> Network
+      </button>
+      <button class="nav-item" data-view="clients" onclick="switchView('clients')">
+        <span class="nav-icon">🤝</span> Clients
+      </button>
+      <button class="nav-item" data-view="audit" onclick="switchView('audit')">
+        <span class="nav-icon">🔐</span> Audit Log
+      </button>
     </div>
     <div class="sidebar-footer">
       <button class="nav-item" onclick="doLogout()">
@@ -319,6 +329,98 @@
       </div>
       <div id="reportsContent" style="padding:0 20px 30px">
         <div class="loading">Loading analytics…</div>
+      </div>
+    </div>
+
+    <!-- ── Network View ──────────────────────────────────── -->
+    <div id="networkView" class="view">
+      <div class="net-layout">
+        <!-- Provider list -->
+        <div class="net-sidebar">
+          <div class="net-sidebar-header">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <h3 style="font-size:13px;font-weight:600;margin:0">Providers</h3>
+              <button class="btn btn-primary btn-sm" onclick="showNewProviderModal()">+ Add</button>
+            </div>
+            <input type="search" id="providerSearch" placeholder="Search providers…" oninput="debouncedLoadProviders()">
+            <div class="conv-filters" style="margin-top:6px">
+              <button class="filter-btn active" data-pfilter="" onclick="setProviderFilter('',this)">All</button>
+              <button class="filter-btn" data-pfilter="preferred" onclick="setProviderFilter('preferred',this)">Preferred</button>
+              <button class="filter-btn" data-pfilter="standard" onclick="setProviderFilter('standard',this)">Standard</button>
+              <button class="filter-btn" data-pfilter="restricted" onclick="setProviderFilter('restricted',this)">Restricted</button>
+            </div>
+          </div>
+          <div id="providersList"></div>
+        </div>
+        <!-- Provider detail -->
+        <div class="net-detail" id="providerDetailPanel">
+          <div class="empty-state-content">
+            <div class="empty-icon">🏨</div>
+            <p>Select a provider to view details</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Clients View ───────────────────────────────────── -->
+    <div id="clientsView" class="view">
+      <div class="page-header">
+        <h2>Clients &amp; Sales Pipeline</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" id="clientViewToggle" onclick="toggleClientView()">📋 List</button>
+          <button class="btn btn-primary" onclick="showNewClientModal()">+ New Client</button>
+        </div>
+      </div>
+      <!-- Stats strip -->
+      <div id="clientStats" style="display:flex;gap:12px;padding:0 20px 14px;flex-shrink:0"></div>
+      <!-- List view -->
+      <div id="clientListView" class="page-content">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr><th>Name</th><th>Type</th><th>Country</th><th>Status</th><th>Account Manager</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="clientsTable"><tr><td colspan="6" class="loading">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <!-- Pipeline kanban view (hidden by default) -->
+      <div id="clientPipelineView" style="display:none;overflow-x:auto;padding:0 20px 20px">
+        <div id="pipelineBoard" style="display:flex;gap:12px;min-width:max-content"></div>
+      </div>
+    </div>
+
+    <!-- ── Audit Log View ─────────────────────────────────── -->
+    <div id="auditView" class="view" style="overflow-y:auto">
+      <div class="page-header">
+        <h2>Audit Log</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="search" id="auditSearch" placeholder="Search logs…" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:200px">
+          <select id="auditActionFilter" class="btn btn-secondary" style="padding:5px 10px;font-size:12px">
+            <option value="">All Actions</option>
+            <option value="create">Create</option>
+            <option value="update">Update</option>
+            <option value="delete">Delete</option>
+            <option value="login">Login</option>
+            <option value="upload">Upload</option>
+          </select>
+          <select id="auditEntityFilter" class="btn btn-secondary" style="padding:5px 10px;font-size:12px">
+            <option value="">All Entities</option>
+            <option value="case">Case</option>
+            <option value="patient">Patient</option>
+            <option value="invoice">Invoice</option>
+            <option value="provider">Provider</option>
+            <option value="client">Client</option>
+          </select>
+          <button class="btn btn-secondary" onclick="loadAuditLog()">↻ Refresh</button>
+        </div>
+      </div>
+      <div style="padding:0 20px 20px">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr><th>Time</th><th>User</th><th>Role</th><th>Action</th><th>Entity</th><th>Summary</th><th>IP</th></tr>
+          </thead>
+          <tbody id="auditTable"><tr><td colspan="7" class="loading">Loading…</td></tr></tbody>
+        </table>
+        <div id="auditPager" style="display:flex;gap:8px;margin-top:12px;align-items:center;font-size:12px"></div>
       </div>
     </div>
 

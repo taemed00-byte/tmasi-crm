@@ -1032,10 +1032,12 @@ function renderCaseDetail(c) {
       '<button class="case-tab active" onclick="switchCaseTab(this,\'notes\')">Notes (' + (c.notes||[]).length + ')</button>' +
       '<button class="case-tab" onclick="switchCaseTab(this,\'tasks\')">Tasks (' + (c.tasks||[]).length + ')</button>' +
       '<button class="case-tab" onclick="switchCaseTab(this,\'info\')">Details</button>' +
+      '<button class="case-tab" onclick="switchCaseTab(this,\'docs\');loadCaseDocuments(\'' + c.id + '\')">📎 Documents</button>' +
     '</div>' +
     '<div id="caseTabNotes" class="case-tab-content active">' + renderNotesList(c.notes || []) + '</div>' +
     '<div id="caseTabTasks" class="case-tab-content">' + renderTasksList(c.tasks || [], c.id) + '</div>' +
     '<div id="caseTabInfo" class="case-tab-content">' + renderCaseInfo(c) + '</div>' +
+    '<div id="caseTabDocs" class="case-tab-content"><div id="caseDocsList"><div style="color:var(--text-muted);font-size:12px;padding:20px;text-align:center">Click the Documents tab to load files</div></div></div>' +
     '</div>';
 }
 
@@ -1436,4 +1438,711 @@ function statCard(label, value, sub, color) {
     '<div class="stat-value"' + (color ? ' style="color:' + color + '"' : '') + '>' + escHtml(String(value)) + '</div>' +
     '<div class="stat-sub">' + escHtml(sub||'') + '</div>' +
   '</div>';
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PHASE 2  —  Network, Clients, Documents, Audit
+   ═══════════════════════════════════════════════════════════════ */
+
+// ── patch switchView to handle new views ──────────────────────
+(function() {
+  var _orig = window.switchView;
+  window.switchView = function(view) {
+    _orig(view);
+    if (view === 'network')  loadNetwork();
+    if (view === 'clients')  { loadClientStats(); loadClients(); }
+    if (view === 'audit')    loadAuditLog();
+  };
+})();
+
+/* ─── NETWORK ─────────────────────────────────────────────────── */
+
+var NetworkState = { categoryFilter: '', searchTimer: null, currentProvider: null };
+
+function debouncedLoadProviders() {
+  clearTimeout(NetworkState.searchTimer);
+  NetworkState.searchTimer = setTimeout(loadNetwork, 300);
+}
+
+function setProviderFilter(cat, btn) {
+  NetworkState.categoryFilter = cat;
+  document.querySelectorAll('[data-pfilter]').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  loadNetwork();
+}
+
+async function loadNetwork() {
+  var q = (document.getElementById('providerSearch') || {}).value || '';
+  var params = new URLSearchParams({ limit: 200 });
+  if (q) params.set('q', q);
+  if (NetworkState.categoryFilter) params.set('category', NetworkState.categoryFilter);
+  try {
+    var res = await apiFetch('/api/network/providers?' + params);
+    renderProviderList(res.items || []);
+  } catch(e) { console.error('loadNetwork', e); }
+  // Also load stats
+  try {
+    var stats = await apiFetch('/api/network/stats');
+    renderNetworkStats(stats);
+  } catch(e) {}
+}
+
+function renderNetworkStats(s) {
+  // Could show in a strip — skip for now, shown in detail
+}
+
+function renderProviderList(providers) {
+  var el = document.getElementById('providersList');
+  if (!providers.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px">No providers found</div>'; return; }
+  el.innerHTML = providers.map(function(p) {
+    var catBadge = '<span class="badge badge-cat-' + (p.category||'standard') + '">' + (p.category||'standard') + '</span>';
+    return '<div class="provider-item' + (NetworkState.currentProvider && NetworkState.currentProvider.id===p.id?' selected':'') + '" onclick="openProvider(\'' + p.id + '\')">' +
+      '<div class="provider-item-name">' + esc(p.name) + '</div>' +
+      '<div class="provider-item-meta">' + catBadge +
+        '<span>' + esc(p.city||'') + (p.country?', '+esc(p.country):'') + '</span>' +
+        '<span class="badge-type">' + esc(p.provider_type||'clinic') + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function openProvider(id) {
+  try {
+    var p = await apiFetch('/api/network/providers/' + id);
+    NetworkState.currentProvider = p;
+    renderProviderDetail(p);
+    document.querySelectorAll('.provider-item').forEach(function(el) {
+      el.classList.toggle('selected', el.getAttribute('onclick') && el.getAttribute('onclick').includes(id));
+    });
+  } catch(e) { showToast('Error loading provider', 'error'); }
+}
+
+function renderProviderDetail(p) {
+  var panel = document.getElementById('providerDetailPanel');
+  var contracts = p.contracts || [];
+  var perf = p.performance || {};
+
+  panel.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">' +
+      '<div>' +
+        '<h2 style="margin:0;font-size:20px">' + esc(p.name) + '</h2>' +
+        '<div style="margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">' +
+          '<span class="badge badge-cat-' + (p.category||'standard') + '">' + (p.category||'standard') + '</span>' +
+          '<span class="badge-type">' + esc(p.provider_type||'clinic') + '</span>' +
+          (p.is_active ? '<span class="badge" style="background:#d4edda;color:#155724">Active</span>' : '<span class="badge" style="background:#f8d7da;color:#721c24">Inactive</span>') +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button class="btn btn-secondary btn-sm" onclick="showEditProviderModal(\'' + p.id + '\')">Edit</button>' +
+        '<button class="btn btn-primary btn-sm" onclick="showNewContractModal(\'' + p.id + '\')">+ Contract</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="perf-grid">' +
+      '<div class="perf-box"><div class="perf-box-value">' + (perf.total_cases||0) + '</div><div class="perf-box-label">Total Cases</div></div>' +
+      '<div class="perf-box"><div class="perf-box-value">' + contracts.length + '</div><div class="perf-box-label">Contracts</div></div>' +
+      '<div class="perf-box"><div class="perf-box-value">' + (contracts.filter(function(c){return c.status==='active';}).length) + '</div><div class="perf-box-label">Active Contracts</div></div>' +
+    '</div>' +
+
+    '<div class="section-card" style="margin-bottom:16px">' +
+      '<div class="section-card-title">Provider Details</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">' +
+        detailRow('Address', (p.address||'')+(p.city?', '+p.city:'')+(p.country?', '+p.country:'')) +
+        detailRow('Phone', p.phone) +
+        detailRow('Email', p.email) +
+        detailRow('Emergency Phone', p.emergency_phone) +
+        detailRow('Specialties', p.specialties) +
+        detailRow('Accreditations', p.accreditations) +
+        detailRow('Languages', p.languages) +
+        detailRow('Accepted Currencies', p.accepted_currencies) +
+        detailRow('Bed Capacity', p.bed_capacity) +
+        detailRow('Notes', p.notes) +
+      '</div>' +
+    '</div>' +
+
+    '<div class="section-card">' +
+      '<div class="section-card-title">Contracts & Tariffs</div>' +
+      (contracts.length ? contracts.map(function(c) { return renderContractCard(c); }).join('') :
+        '<div style="color:var(--text-muted);font-size:12px;padding:10px 0">No contracts yet</div>') +
+    '</div>';
+}
+
+function detailRow(label, val) {
+  if (!val && val !== 0) return '';
+  return '<div><span style="color:var(--text-muted)">' + label + ':</span> <strong>' + esc(String(val)) + '</strong></div>';
+}
+
+function renderContractCard(c) {
+  var tariffRows = (c.tariffs||[]).map(function(t) {
+    return '<tr><td>' + esc(t.service_category) + '</td><td>' + esc(t.service_name) + '</td>' +
+      '<td>' + (t.unit_cost||0).toFixed(2) + ' ' + (t.currency||'USD') + '</td>' +
+      '<td>' + esc(t.pricing_model||'-') + '</td>' +
+      '<td><button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:10px" onclick="deleteTariff(\'' + c.id + '\',\'' + t.id + '\')">✕</button></td>' +
+    '</tr>';
+  }).join('');
+
+  var statusColor = {active:'#d4edda', draft:'#e2e3e5', expired:'#f8d7da', terminated:'#f8d7da'}[c.status] || '#e2e3e5';
+
+  return '<div class="contract-card">' +
+    '<div class="contract-card-header">' +
+      '<div>' +
+        '<strong style="font-size:13px">' + esc(c.contract_number) + '</strong>' +
+        '<span class="badge ms-2" style="margin-left:8px;background:' + statusColor + '">' + (c.status||'') + '</span>' +
+      '</div>' +
+      '<button class="btn btn-secondary btn-sm" onclick="showAddTariffModal(\'' + c.id + '\')">+ Tariff</button>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;margin-bottom:10px">' +
+      detailRow('Start', c.start_date ? c.start_date.split('T')[0] : null) +
+      detailRow('End', c.end_date ? c.end_date.split('T')[0] : null) +
+      detailRow('Credit Terms', c.credit_terms_days ? c.credit_terms_days + ' days' : null) +
+      detailRow('Currency', c.payment_currency) +
+      detailRow('Discount', c.discount_percentage ? c.discount_percentage + '%' : null) +
+    '</div>' +
+    (c.tariffs && c.tariffs.length ?
+      '<table class="tariff-table"><thead><tr><th>Category</th><th>Service</th><th>Cost</th><th>Model</th><th></th></tr></thead><tbody>' + tariffRows + '</tbody></table>' : '') +
+  '</div>';
+}
+
+function showNewProviderModal() {
+  openModal('Add Provider', providerForm({}), async function() {
+    var data = collectForm('providerForm');
+    if (!data.name) { showToast('Name required','error'); return; }
+    await apiFetch('/api/network/providers', { method:'POST', body: JSON.stringify(data) });
+    showToast('Provider added');
+    loadNetwork();
+  });
+}
+
+function showEditProviderModal(id) {
+  var p = NetworkState.currentProvider;
+  openModal('Edit Provider', providerForm(p||{}), async function() {
+    var data = collectForm('providerForm');
+    await apiFetch('/api/network/providers/' + id, { method:'PATCH', body: JSON.stringify(data) });
+    showToast('Provider updated');
+    openProvider(id);
+    loadNetwork();
+  });
+}
+
+function providerForm(p) {
+  return '<form id="providerForm">' +
+    formField('name','Provider Name','text',p.name||'',true) +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formSelect('provider_type','Type',['hospital','clinic','pharmacy','laboratory','ambulance','specialist','other'],p.provider_type||'clinic') +
+      formSelect('category','Category',['preferred','standard','restricted','blacklisted'],p.category||'standard') +
+    '</div>' +
+    formField('address','Address','text',p.address||'') +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formField('city','City','text',p.city||'') +
+      formField('country','Country','text',p.country||'') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formField('phone','Phone','text',p.phone||'') +
+      formField('email','Email','email',p.email||'') +
+    '</div>' +
+    formField('emergency_phone','Emergency Phone','text',p.emergency_phone||'') +
+    formField('specialties','Specialties (comma-separated)','text',p.specialties||'') +
+    formField('accreditations','Accreditations','text',p.accreditations||'') +
+    formField('accepted_currencies','Accepted Currencies','text',p.accepted_currencies||'USD') +
+    formField('notes','Notes','text',p.notes||'') +
+  '</form>';
+}
+
+function showNewContractModal(providerId) {
+  openModal('New Contract', contractForm({}), async function() {
+    var data = collectForm('contractForm');
+    data.provider_id = providerId;
+    await apiFetch('/api/network/contracts', { method:'POST', body: JSON.stringify(data) });
+    showToast('Contract created');
+    openProvider(providerId);
+  });
+}
+
+function contractForm(c) {
+  return '<form id="contractForm">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formField('start_date','Start Date','date',c.start_date?c.start_date.split('T')[0]:'') +
+      formField('end_date','End Date','date',c.end_date?c.end_date.split('T')[0]:'') +
+    '</div>' +
+    formSelect('status','Status',['draft','active','expired','terminated'],c.status||'draft') +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formField('credit_terms_days','Credit Terms (days)','number',c.credit_terms_days||30) +
+      formField('discount_percentage','Discount (%)','number',c.discount_percentage||0) +
+    '</div>' +
+    formSelect('payment_currency','Currency',['USD','EUR','EGP'],c.payment_currency||'USD') +
+    formField('scope_notes','Scope Notes','text',c.scope_notes||'') +
+    formField('exclusions','Exclusions','text',c.exclusions||'') +
+  '</form>';
+}
+
+function showAddTariffModal(contractId) {
+  openModal('Add Tariff Line', tariffForm(), async function() {
+    var data = collectForm('tariffForm');
+    if (!data.service_name || !data.unit_cost) { showToast('Service name and cost required','error'); return; }
+    data.unit_cost = parseFloat(data.unit_cost) || 0;
+    await apiFetch('/api/network/contracts/' + contractId + '/tariffs', { method:'POST', body: JSON.stringify(data) });
+    showToast('Tariff added');
+    if (NetworkState.currentProvider) openProvider(NetworkState.currentProvider.id);
+  });
+}
+
+function tariffForm() {
+  var cats = ['Outpatient Consultation','Inpatient Room & Board','Surgical Procedures','Laboratory Tests','Radiology','Medication','Ambulance','Medical Evacuation','Other'];
+  return '<form id="tariffForm">' +
+    formSelect('service_category','Category',cats,'Other') +
+    formField('service_name','Service Name','text','',true) +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formField('unit_cost','Unit Cost','number','0') +
+      formSelect('currency','Currency',['USD','EUR','EGP'],'USD') +
+    '</div>' +
+    formSelect('pricing_model','Pricing Model',['fixed','per_night','per_km','per_case','DRG','percentage'],'fixed') +
+    formField('notes','Notes','text','') +
+  '</form>';
+}
+
+async function deleteTariff(contractId, tariffId) {
+  if (!confirm('Delete this tariff line?')) return;
+  await apiFetch('/api/network/contracts/' + contractId + '/tariffs/' + tariffId, { method:'DELETE' });
+  showToast('Tariff removed');
+  if (NetworkState.currentProvider) openProvider(NetworkState.currentProvider.id);
+}
+
+/* ─── CLIENTS ─────────────────────────────────────────────────── */
+
+var ClientState = { viewMode: 'list', currentClient: null };
+
+function toggleClientView() {
+  var btn = document.getElementById('clientViewToggle');
+  if (ClientState.viewMode === 'list') {
+    ClientState.viewMode = 'pipeline';
+    btn.textContent = '📋 List';
+    document.getElementById('clientListView').style.display = 'none';
+    document.getElementById('clientPipelineView').style.display = 'block';
+    loadPipeline();
+  } else {
+    ClientState.viewMode = 'list';
+    btn.textContent = '🔀 Pipeline';
+    document.getElementById('clientListView').style.display = '';
+    document.getElementById('clientPipelineView').style.display = 'none';
+  }
+}
+
+async function loadClientStats() {
+  try {
+    var s = await apiFetch('/api/clients/stats');
+    var el = document.getElementById('clientStats');
+    if (!el) return;
+    el.innerHTML =
+      kpiCard('Total Clients', s.total_clients, '') +
+      kpiCard('Active', s.active_clients, '') +
+      kpiCard('Prospects', s.prospects, '') +
+      kpiCard('Active Contracts', s.active_contracts, '') +
+      kpiCard('Pipeline', s.pipeline_open_count + ' deals / $' + fmtNum(s.pipeline_open_value_usd), '');
+  } catch(e) {}
+}
+
+function kpiCard(label, value, sub) {
+  return '<div class="kpi-card"><div class="kpi-value">' + value + '</div><div class="kpi-label">' + label + '</div></div>';
+}
+
+async function loadClients() {
+  var q = '';
+  try {
+    var res = await apiFetch('/api/clients?limit=200');
+    var tbody = document.getElementById('clientsTable');
+    if (!res.items || !res.items.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">No clients yet</td></tr>'; return; }
+    tbody.innerHTML = res.items.map(function(c) {
+      var statusColor = {active:'#d4edda',prospect:'#fff3cd',inactive:'#e2e3e5',churned:'#f8d7da'}[c.status]||'#e2e3e5';
+      return '<tr>' +
+        '<td><strong style="cursor:pointer;color:var(--primary)" onclick="openClientDetail(\'' + c.id + '\')">' + esc(c.name) + '</strong></td>' +
+        '<td>' + esc((c.client_type||'').replace(/_/g,' ')) + '</td>' +
+        '<td>' + esc(c.country||'-') + '</td>' +
+        '<td><span class="badge" style="background:' + statusColor + '">' + (c.status||'') + '</span></td>' +
+        '<td>' + esc(c.account_manager_name||'-') + '</td>' +
+        '<td>' +
+          '<button class="btn btn-secondary btn-sm" onclick="openClientDetail(\'' + c.id + '\')">View</button> ' +
+          '<button class="btn btn-secondary btn-sm" onclick="showEditClientModal(\'' + c.id + '\')">Edit</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  } catch(e) { console.error('loadClients', e); }
+}
+
+async function openClientDetail(id) {
+  try {
+    var c = await apiFetch('/api/clients/' + id);
+    ClientState.currentClient = c;
+    var html = '<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">' +
+      '<div style="background:white;border-radius:12px;padding:24px;width:700px;max-height:80vh;overflow-y:auto">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+          '<h2 style="margin:0;font-size:18px">' + esc(c.name) + '</h2>' +
+          '<button class="btn btn-secondary btn-sm" onclick="this.closest(\'div[style*=fixed]\').remove()">✕</button>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:16px">' +
+          detailRow('Type', (c.client_type||'').replace(/_/g,' ')) +
+          detailRow('Status', c.status) +
+          detailRow('Country', c.country) +
+          detailRow('Client Since', c.client_since ? c.client_since.split('T')[0] : null) +
+          detailRow('Primary Contact', c.primary_contact_name + (c.primary_contact_phone?' · '+c.primary_contact_phone:'')) +
+          detailRow('Claims Contact', c.claims_contact_name + (c.claims_contact_phone?' · '+c.claims_contact_phone:'')) +
+          detailRow('Finance Contact', c.finance_contact_name + (c.finance_contact_email?' · '+c.finance_contact_email:'')) +
+          detailRow('Annual Case Target', c.annual_case_volume_target) +
+          detailRow('Revenue Target', c.annual_revenue_target_usd ? '$'+fmtNum(c.annual_revenue_target_usd) : null) +
+        '</div>' +
+
+        '<h4 style="font-size:13px;margin:0 0 8px">Contracts</h4>' +
+        ((c.contracts||[]).length ?
+          c.contracts.map(function(ct) {
+            return '<div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;font-size:12px">' +
+              '<strong>' + esc(ct.contract_number) + '</strong> · ' + (ct.status||'') +
+              (ct.start_date ? ' · ' + ct.start_date.split('T')[0] : '') +
+              (ct.end_date ? ' – ' + ct.end_date.split('T')[0] : '') +
+              (ct.billing_currency ? ' · ' + ct.billing_currency : '') +
+              '</div>';
+          }).join('') : '<div style="color:var(--text-muted);font-size:12px;margin-bottom:12px">No contracts</div>') +
+
+        '<button class="btn btn-primary btn-sm" style="margin-bottom:16px" onclick="showNewClientContractModal(\'' + c.id + '\',this)">+ Add Contract</button>' +
+
+        '<h4 style="font-size:13px;margin:0 0 8px">Sales Pipeline</h4>' +
+        ((c.pipeline||[]).length ?
+          c.pipeline.map(function(p) {
+            return '<div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;font-size:12px">' +
+              '<strong>' + esc(p.title) + '</strong> · <span class="badge">' + (p.stage||'') + '</span>' +
+              (p.value_usd ? ' · $'+fmtNum(p.value_usd) : '') +
+              '</div>';
+          }).join('') : '<div style="color:var(--text-muted);font-size:12px;margin-bottom:12px">No pipeline items</div>') +
+
+        '<button class="btn btn-primary btn-sm" onclick="showNewPipelineModal(\'' + c.id + '\',this)">+ Add Pipeline Item</button>' +
+      '</div>' +
+    '</div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+  } catch(e) { showToast('Error loading client', 'error'); }
+}
+
+function showNewClientModal() {
+  openModal('New Client', clientForm({}), async function() {
+    var data = collectForm('clientForm');
+    if (!data.name) { showToast('Name required', 'error'); return; }
+    await apiFetch('/api/clients', { method:'POST', body: JSON.stringify(data) });
+    showToast('Client created');
+    loadClients();
+    loadClientStats();
+  });
+}
+
+function showEditClientModal(id) {
+  apiFetch('/api/clients/' + id).then(function(c) {
+    openModal('Edit Client', clientForm(c), async function() {
+      var data = collectForm('clientForm');
+      await apiFetch('/api/clients/' + id, { method:'PATCH', body: JSON.stringify(data) });
+      showToast('Client updated');
+      loadClients();
+    });
+  });
+}
+
+function clientForm(c) {
+  return '<form id="clientForm">' +
+    formField('name','Client Name','text',c.name||'',true) +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formSelect('client_type','Type',['insurance_company','assistance_company','corporate','other'],c.client_type||'insurance_company') +
+      formSelect('status','Status',['prospect','active','inactive','churned'],c.status||'prospect') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formField('country','Country','text',c.country||'') +
+      formField('operating_countries','Operating Countries','text',c.operating_countries||'') +
+    '</div>' +
+    '<hr style="margin:10px 0"><strong style="font-size:12px">Primary Contact</strong>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">' +
+      formField('primary_contact_name','Name','text',c.primary_contact_name||'') +
+      formField('primary_contact_phone','Phone','text',c.primary_contact_phone||'') +
+    '</div>' +
+    formField('primary_contact_email','Email','email',c.primary_contact_email||'') +
+    '<hr style="margin:10px 0"><strong style="font-size:12px">Commercial</strong>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">' +
+      formField('annual_case_volume_target','Annual Case Target','number',c.annual_case_volume_target||'') +
+      formField('annual_revenue_target_usd','Revenue Target (USD)','number',c.annual_revenue_target_usd||'') +
+    '</div>' +
+    formField('notes','Notes','text',c.notes||'') +
+  '</form>';
+}
+
+function showNewClientContractModal(clientId, btn) {
+  openModal('New Contract', clientContractForm({}), async function() {
+    var data = collectForm('clientContractForm');
+    await apiFetch('/api/clients/' + clientId + '/contracts', { method:'POST', body: JSON.stringify(data) });
+    showToast('Contract created');
+    document.querySelector('div[style*=fixed]') && document.querySelector('div[style*=fixed]').remove();
+    openClientDetail(clientId);
+  });
+}
+
+function clientContractForm(c) {
+  return '<form id="clientContractForm">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formField('start_date','Start Date','date',c.start_date?c.start_date.split('T')[0]:'') +
+      formField('end_date','End Date','date',c.end_date?c.end_date.split('T')[0]:'') +
+    '</div>' +
+    formSelect('status','Status',['draft','under_review','active','expired','terminated'],c.status||'draft') +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formSelect('billing_frequency','Billing Frequency',['per_case','monthly','quarterly'],c.billing_frequency||'per_case') +
+      formField('payment_terms_days','Payment Terms (days)','number',c.payment_terms_days||30) +
+    '</div>' +
+    formSelect('billing_currency','Currency',['USD','EUR','EGP'],c.billing_currency||'USD') +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formSelect('management_fee_type','Fee Type',['per_case','retainer','percentage'],c.management_fee_type||'per_case') +
+      formField('management_fee_value','Fee Value','number',c.management_fee_value||'') +
+    '</div>' +
+    formField('service_scope','Service Scope','text',c.service_scope||'') +
+    formField('sla_commitments','SLA Commitments','text',c.sla_commitments||'') +
+    formField('exclusions','Exclusions','text',c.exclusions||'') +
+  '</form>';
+}
+
+function showNewPipelineModal(clientId) {
+  openModal('Add Pipeline Item', pipelineForm({}), async function() {
+    var data = collectForm('pipelineForm');
+    if (!data.title) { showToast('Title required','error'); return; }
+    if (data.value_usd) data.value_usd = parseFloat(data.value_usd);
+    if (data.probability) data.probability = parseInt(data.probability);
+    await apiFetch('/api/clients/' + clientId + '/pipeline', { method:'POST', body: JSON.stringify(data) });
+    showToast('Pipeline item added');
+    document.querySelector('div[style*=fixed]') && document.querySelector('div[style*=fixed]').remove();
+    openClientDetail(clientId);
+  });
+}
+
+function pipelineForm(p) {
+  return '<form id="pipelineForm">' +
+    formField('title','Title','text',p.title||'',true) +
+    formSelect('stage','Stage',['lead','qualified','proposal','negotiation','contract_sent','won','lost'],p.stage||'lead') +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      formField('value_usd','Deal Value (USD)','number',p.value_usd||'') +
+      formField('probability','Probability (%)','number',p.probability||'') +
+    '</div>' +
+    formField('expected_close','Expected Close','date',p.expected_close?p.expected_close.split('T')[0]:'') +
+    formField('description','Notes','text',p.description||'') +
+  '</form>';
+}
+
+async function loadPipeline() {
+  try {
+    var res = await apiFetch('/api/clients/pipeline');
+    renderPipelineBoard(res.by_stage || {});
+  } catch(e) { console.error('loadPipeline', e); }
+}
+
+function renderPipelineBoard(byStage) {
+  var stages = [
+    {key:'lead',label:'Lead'},
+    {key:'qualified',label:'Qualified'},
+    {key:'proposal',label:'Proposal Sent'},
+    {key:'negotiation',label:'Negotiation'},
+    {key:'contract_sent',label:'Contract Sent'},
+    {key:'won',label:'Won'},
+    {key:'lost',label:'Lost'},
+  ];
+  var board = document.getElementById('pipelineBoard');
+  board.innerHTML = stages.map(function(s) {
+    var items = byStage[s.key] || [];
+    var total = items.reduce(function(acc,i){ return acc + (i.value_usd||0); }, 0);
+    return '<div class="pipeline-column stage-' + s.key + '">' +
+      '<div class="pipeline-column-header">' +
+        '<span>' + s.label + '</span>' +
+        '<span style="background:var(--border);border-radius:10px;padding:2px 7px;font-size:10px;font-weight:700">' + items.length + '</span>' +
+      '</div>' +
+      (total ? '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">$' + fmtNum(total) + '</div>' : '') +
+      items.map(function(item) {
+        return '<div class="pipeline-card">' +
+          '<div class="pipeline-card-title">' + esc(item.title) + '</div>' +
+          '<div class="pipeline-card-meta">' + esc(item.client_name||'-') + '</div>' +
+          (item.value_usd ? '<div class="pipeline-card-value">$' + fmtNum(item.value_usd) + '</div>' : '') +
+          (item.probability ? '<div class="pipeline-card-meta">' + item.probability + '% probability</div>' : '') +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }).join('');
+}
+
+/* ─── DOCUMENTS (inside Case detail) ─────────────────────────── */
+
+async function loadCaseDocuments(caseId) {
+  try {
+    var docs = await apiFetch('/api/documents/case/' + caseId);
+    renderDocumentList(caseId, docs);
+  } catch(e) { console.error('loadCaseDocuments', e); }
+}
+
+function renderDocumentList(caseId, docs) {
+  var el = document.getElementById('caseDocsList');
+  if (!el) return;
+
+  var typeOpts = [
+    'medical_report','gop','passport','insurance_card','lab_results',
+    'discharge_summary','claim_form','pre_auth_letter','provider_bill',
+    'evacuation_document','contract','other'
+  ];
+
+  var docIcons = {
+    medical_report:'🏥', gop:'📄', passport:'🛂', insurance_card:'💳',
+    lab_results:'🧪', discharge_summary:'📋', claim_form:'📝', pre_auth_letter:'✉️',
+    provider_bill:'💰', evacuation_document:'🚁', contract:'📜', other:'📎'
+  };
+
+  el.innerHTML =
+    '<div class="doc-upload-zone" onclick="document.getElementById(\'docFileInput_'+caseId+'\').click()">' +
+      '<div style="font-size:24px;margin-bottom:6px">📎</div>' +
+      '<div style="font-size:12px;color:var(--text-muted)">Click to upload document (PDF, DOCX, JPG, PNG — max 20MB)</div>' +
+      '<input type="file" id="docFileInput_' + caseId + '" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.txt" onchange="uploadCaseDocument(\'' + caseId + '\',this)">' +
+    '</div>' +
+    '<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">' +
+      '<label style="font-size:11px">Document Type:</label>' +
+      '<select id="docTypeSelect_' + caseId + '" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px">' +
+        typeOpts.map(function(t){ return '<option value="'+t+'">'+t.replace(/_/g,' ')+'</option>'; }).join('') +
+      '</select>' +
+    '</div>' +
+    '<div class="doc-list">' +
+    (docs.length ? docs.map(function(d) {
+      var icon = docIcons[d.doc_type] || '📎';
+      var size = d.file_size ? (d.file_size > 1048576 ? (d.file_size/1048576).toFixed(1)+'MB' : (d.file_size/1024).toFixed(0)+'KB') : '';
+      return '<div class="doc-item">' +
+        '<div class="doc-item-icon">' + icon + '</div>' +
+        '<div class="doc-item-info">' +
+          '<div class="doc-item-name">' + esc(d.filename) + '</div>' +
+          '<div class="doc-item-meta">' + (d.doc_type||'').replace(/_/g,' ') + ' · ' + size + ' · v' + (d.version||1) + (d.uploader_name?' · '+esc(d.uploader_name):'') + '</div>' +
+        '</div>' +
+        '<div class="doc-item-actions">' +
+          '<a class="btn btn-secondary btn-sm" href="/api/documents/' + d.id + '/download" target="_blank">⬇ Download</a>' +
+          '<button class="btn btn-secondary btn-sm" onclick="deleteCaseDocument(\'' + caseId + '\',\'' + d.id + '\')" style="color:#dc3545">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join('') : '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:10px">No documents uploaded yet</div>') +
+    '</div>';
+}
+
+async function uploadCaseDocument(caseId, input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var docType = (document.getElementById('docTypeSelect_' + caseId) || {}).value || 'other';
+  var formData = new FormData();
+  formData.append('file', file);
+  formData.append('doc_type', docType);
+
+  showToast('Uploading...');
+  try {
+    var token = localStorage.getItem('tmasi_token') || '';
+    var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    var res = await fetch('/api/documents/case/' + caseId, {
+      method: 'POST',
+      headers: headers,
+      body: formData,
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error(await res.text());
+    showToast('Document uploaded');
+    loadCaseDocuments(caseId);
+  } catch(e) { showToast('Upload failed: ' + e.message, 'error'); }
+  input.value = '';
+}
+
+async function deleteCaseDocument(caseId, docId) {
+  if (!confirm('Delete this document?')) return;
+  await apiFetch('/api/documents/' + docId, { method: 'DELETE' });
+  showToast('Document deleted');
+  loadCaseDocuments(caseId);
+}
+
+/* ─── AUDIT LOG ───────────────────────────────────────────────── */
+
+var AuditState = { skip: 0, limit: 50, total: 0 };
+
+async function loadAuditLog(skipVal) {
+  if (skipVal !== undefined) AuditState.skip = skipVal;
+  var q       = (document.getElementById('auditSearch')||{}).value || '';
+  var action  = (document.getElementById('auditActionFilter')||{}).value || '';
+  var entity  = (document.getElementById('auditEntityFilter')||{}).value || '';
+  var params  = new URLSearchParams({ skip: AuditState.skip, limit: AuditState.limit });
+  if (q)      params.set('q', q);
+  if (action) params.set('action', action);
+  if (entity) params.set('entity_type', entity);
+
+  var tbody = document.getElementById('auditTable');
+  tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading…</td></tr>';
+  try {
+    var res = await apiFetch('/api/audit?' + params);
+    AuditState.total = res.total || 0;
+    if (!res.items || !res.items.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No audit records found</td></tr>';
+    } else {
+      tbody.innerHTML = res.items.map(function(l) {
+        var ts = l.timestamp ? new Date(l.timestamp).toLocaleString() : '-';
+        var actionClass = 'audit-action-' + (l.action||'update');
+        return '<tr>' +
+          '<td style="white-space:nowrap;font-size:11px">' + ts + '</td>' +
+          '<td>' + esc(l.username||'-') + '</td>' +
+          '<td style="font-size:11px">' + esc(l.user_role||'-') + '</td>' +
+          '<td><span class="' + actionClass + '">' + esc(l.action||'-') + '</span></td>' +
+          '<td>' + esc(l.entity_type||'-') + (l.entity_id?' <span style="color:var(--text-muted);font-size:10px">#'+l.entity_id.substring(0,8)+'</span>':'') + '</td>' +
+          '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(l.summary||'-') + '</td>' +
+          '<td style="font-size:11px">' + esc(l.ip_address||'-') + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+    renderAuditPager();
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="color:red;text-align:center">Error loading audit log</td></tr>'; }
+}
+
+function renderAuditPager() {
+  var el = document.getElementById('auditPager');
+  if (!el) return;
+  var pages = Math.ceil(AuditState.total / AuditState.limit);
+  var currentPage = Math.floor(AuditState.skip / AuditState.limit) + 1;
+  el.innerHTML =
+    '<span>Total: ' + AuditState.total + ' records</span>' +
+    (currentPage > 1 ? '<button class="btn btn-secondary btn-sm" onclick="loadAuditLog(' + (AuditState.skip-AuditState.limit) + ')">← Prev</button>' : '') +
+    '<span>Page ' + currentPage + ' of ' + pages + '</span>' +
+    (currentPage < pages ? '<button class="btn btn-secondary btn-sm" onclick="loadAuditLog(' + (AuditState.skip+AuditState.limit) + ')">Next →</button>' : '');
+}
+
+// Wire up audit search/filter inputs
+document.addEventListener('DOMContentLoaded', function() {
+  ['auditSearch','auditActionFilter','auditEntityFilter'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('change', function(){ loadAuditLog(0); });
+    if (el && el.tagName === 'INPUT') el.addEventListener('input', function(){ clearTimeout(el._t); el._t = setTimeout(function(){ loadAuditLog(0); }, 400); });
+  });
+});
+
+/* ─── shared helpers ──────────────────────────────────────────── */
+
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtNum(n) {
+  return Number(n||0).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+
+function formField(name, label, type, value, required) {
+  return '<div class="field">' +
+    '<label>' + label + (required?' *':'') + '</label>' +
+    '<input type="' + type + '" name="' + name + '" value="' + esc(String(value||'')) + '"' + (required?' required':'') + '>' +
+  '</div>';
+}
+
+function formSelect(name, label, options, selected) {
+  return '<div class="field"><label>' + label + '</label>' +
+    '<select name="' + name + '">' +
+      options.map(function(o){ return '<option value="' + o + '"' + (o===selected?' selected':'') + '>' + o.replace(/_/g,' ') + '</option>'; }).join('') +
+    '</select></div>';
+}
+
+function collectForm(formId) {
+  var form = document.getElementById(formId);
+  if (!form) return {};
+  var data = {};
+  new FormData(form).forEach(function(v, k) { if (v !== '') data[k] = v; });
+  return data;
 }
