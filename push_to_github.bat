@@ -1,68 +1,44 @@
 @echo off
 cd /d "%~dp0"
-
 echo.
 echo  Pushing TMASI CRM to GitHub...
 echo  ================================
 echo.
 
-REM ── Clear any stale git lock files ────────────────────────
-for %%L in (
-    ".git\index.lock"
-    ".git\config.lock"
-    ".git\HEAD.lock"
-    ".git\COMMIT_EDITMSG.lock"
-    ".git\MERGE_HEAD"
-) do (
-    if exist "%%L" (
-        echo  [FIX] Removing %%L...
-        del /f "%%L" >nul 2>&1
-    )
+REM ── Read token from gitignored file ──────────────────────
+if not exist "deploy_token.txt" (
+    echo  [ERROR] deploy_token.txt not found.
+    echo  Create it with your GitHub PAT on the first line.
+    pause & exit /b 1
+)
+set /p GH_TOKEN=<deploy_token.txt
+
+REM ── Clear stale lock files ────────────────────────────────
+for %%L in (".git\index.lock" ".git\config.lock" ".git\HEAD.lock") do (
+    if exist "%%L" del /f /q "%%L" >nul 2>&1
 )
 
-REM ── Configure git identity ────────────────────────────────
+REM ── Set git identity and remote ───────────────────────────
 git config user.email "taemed00@gmail.com"
 git config user.name "taemed00-byte"
+git remote set-url origin https://oauth2:%GH_TOKEN%@github.com/taemed00-byte/tmasi-crm.git
 
-REM ── Configure remote (stored in .git/config, never committed) ──
-git remote set-url origin https://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@github.com/taemed00-byte/tmasi-crm.git
-
-REM ── Stage everything ──────────────────────────────────────
+REM ── Stage and commit ─────────────────────────────────────
 git add -A
-if errorlevel 1 (
-    echo  [ERROR] git add failed.
-    pause & exit /b 1
-)
-
-REM ── Show staged summary ───────────────────────────────────
-echo.
-git diff --cached --stat
-echo.
-
-REM ── Commit if there are changes ───────────────────────────
 git diff --cached --quiet
 if %errorlevel% neq 0 (
-    git commit -m "Phase 2: Network, Clients, Documents, Audit Trail, Business Rules Engine"
-    if errorlevel 1 (
-        echo  [ERROR] Commit failed.
-        pause & exit /b 1
-    )
+    git commit -m "Update TMASI CRM"
 )
 
-REM ── Push ──────────────────────────────────────────────────
-git push origin main
+REM ── Push ─────────────────────────────────────────────────
+set GIT_TERMINAL_PROMPT=0
+git -c credential.helper= push origin main
 if errorlevel 1 (
-    echo.
-    echo  [TIP] If blocked by secret scanning, visit the unblock URL
-    echo  shown above in the output, then run this script again.
-    echo.
+    echo  [ERROR] Push failed.
     pause & exit /b 1
 )
 
 echo.
-echo  ================================================
-echo   [OK] Pushed! Render will redeploy automatically.
-echo   Monitor: https://dashboard.render.com
-echo  ================================================
+echo  [OK] Pushed successfully!
 echo.
 pause

@@ -5,6 +5,14 @@ echo  TMASI CRM — Fix git config and push
 echo  =====================================
 echo.
 
+REM ── Read token from gitignored file ──────────────────────
+if not exist "deploy_token.txt" (
+    echo  [ERROR] deploy_token.txt not found.
+    echo  Create it with your GitHub PAT on the first line.
+    pause & exit /b 1
+)
+set /p GH_TOKEN=<deploy_token.txt
+
 REM ── Kill any background git processes ─────────────────────
 taskkill /f /im git.exe >nul 2>&1
 timeout /t 1 >nul
@@ -24,7 +32,7 @@ for %%L in (
     )
 )
 
-REM ── Rewrite .git\config from scratch ─────────────────────
+REM ── Rewrite .git\config (never committed) ─────────────────
 echo  [FIX] Writing fresh .git\config...
 (
 echo [core]
@@ -35,7 +43,7 @@ echo     logallrefupdates = true
 echo     symlinks = false
 echo     ignorecase = true
 echo [remote "origin"]
-echo     url = https://oauth2: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@github.com/taemed00-byte/tmasi-crm.git
+echo     url = https://oauth2:%GH_TOKEN%@github.com/taemed00-byte/tmasi-crm.git
 echo     fetch = +refs/heads/*:refs/remotes/origin/*
 echo [branch "main"]
 echo     remote = origin
@@ -44,37 +52,32 @@ echo [user]
 echo     name = taemed00-byte
 echo     email = taemed00@gmail.com
 ) > ".git\config"
-
 echo  [OK] git config written.
 echo.
 
-REM ── Verify git works now ──────────────────────────────────
+REM ── Verify git works ─────────────────────────────────────
 git status >nul 2>&1
 if errorlevel 1 (
     echo  [ERROR] git still broken after config fix.
     pause & exit /b 1
 )
 
-REM ── Stage and commit everything ───────────────────────────
+REM ── Stage and commit ─────────────────────────────────────
 git add -A
-if errorlevel 1 (
-    echo  [ERROR] git add failed.
-    pause & exit /b 1
-)
-
+echo.
 echo  Staged files:
 git diff --cached --stat
 echo.
 
 git diff --cached --quiet
 if %errorlevel% neq 0 (
-    git commit -m "Phase 2: Network, Clients, Documents, Audit, Business Rules + fix UserRole.clinic_admin"
+    git commit -m "Phase 2: Network, Clients, Documents, Audit, Business Rules"
     if errorlevel 1 (
         echo  [ERROR] Commit failed.
         pause & exit /b 1
     )
 ) else (
-    echo  [INFO] No changes to commit, pushing existing commits...
+    echo  [INFO] Nothing new to commit, pushing existing commits...
 )
 
 REM ── Push (bypass Windows Credential Manager) ─────────────
@@ -88,8 +91,7 @@ if errorlevel 1 (
 
 echo.
 echo  ================================================
-echo   [OK] Pushed successfully!
-echo   Render will redeploy automatically.
+echo   [OK] Pushed! Render will redeploy automatically.
 echo   Monitor: https://dashboard.render.com
 echo  ================================================
 echo.

@@ -43,3 +43,5 @@ Thumbs.db
 # Alembic (keep migrations dir but not env cache)
 alembic/versions/__pycache__/
 .gh_token
+.deploy_token
+deploy_token.txt
