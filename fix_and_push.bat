@@ -35,7 +35,7 @@ echo     logallrefupdates = true
 echo     symlinks = false
 echo     ignorecase = true
 echo [remote "origin"]
-echo     url = https://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@github.com/taemed00-byte/tmasi-crm.git
+echo     url = https://oauth2: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@github.com/taemed00-byte/tmasi-crm.git
 echo     fetch = +refs/heads/*:refs/remotes/origin/*
 echo [branch "main"]
 echo     remote = origin
